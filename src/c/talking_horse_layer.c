@@ -29,8 +29,6 @@ typedef struct {
   GTextAttributes *text_attributes;
 } TalkingHorseLayerData;
 
-const int SPEECH_BUBBLE_BASELINE = 59;
-
 static void prv_update_layer(Layer *layer, GContext *ctx);
 static GTextAttributes *prv_create_text_attributes(TalkingHorseLayer *layer);
 static GRangeHorizontal prv_perimeter_callback(const GPerimeter *perimeter, const GSize *ctx_size, GRangeVertical vertical_range, uint16_t inset);
@@ -60,7 +58,7 @@ void talking_horse_layer_set_text(TalkingHorseLayer *layer, const char *text) {
   TalkingHorseLayerData *data = layer_get_data(layer);
   data->text = text;
   GRect bounds = layer_get_bounds(layer);
-  data->text_size = graphics_text_layout_get_content_size_with_attributes(text, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GRect(0, 1, bounds.size.w - 18, bounds.size.h - 15), GTextOverflowModeWordWrap, GTextAlignmentLeft, data->text_attributes);
+  data->text_size = graphics_text_layout_get_content_size_with_attributes(text, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GRect(0, 1, bounds.size.w - 23, bounds.size.h - 15), GTextOverflowModeWordWrap, GTextAlignmentLeft, data->text_attributes);
   layer_mark_dirty(layer);
 }
 
@@ -75,20 +73,29 @@ static void prv_update_layer(Layer *layer, GContext *ctx) {
   const int corner_offset = 6;
 
   // Pony is drawn at bottom-left of layer
+#ifdef PBL_PLATFORM_EMERY
+  // Pony is scaled up 60% on emery: 57x59 -> 91x94
+  const int pony_height = 94;
+  const int pony_width = 91;
+  const int pony_mouth_y_offset = 48;  // Scaled from ~30
+#else
   const int pony_height = 59;
+  const int pony_width = 57;
+  const int pony_mouth_y_offset = 30;
+#endif
   const int pony_y = size.h - pony_height;
 
 #ifdef PBL_PLATFORM_EMERY
-  // On emery (large screen), position bubble above the pony's mouth
-  const int bubble_bottom_margin = 35;
-  const int speech_bubble_top = pony_y - text_height - bubble_bottom_margin;
+  // On emery (large screen), position bubble close to pony
+  const int bubble_overlap = 2;
+  const int speech_bubble_top = pony_y - text_height + bubble_overlap;
 #else
   // On smaller screens, bubble at top of layer
   const int speech_bubble_top = 1;
 #endif
 
-  // Tail tip points to pony's mouth area
-  GPoint tail_tip = GPoint(55 - available_space, pony_y + 30 - speech_bubble_top);
+  // Tail tip points to pony's mouth area (x scaled from ~55)
+  GPoint tail_tip = GPoint((pony_width * 55 / 59) - available_space, pony_y + pony_mouth_y_offset - speech_bubble_top);
 
   GPath bubble_path = {
     .num_points = 11,
@@ -141,7 +148,11 @@ static GRangeHorizontal prv_perimeter_callback(const GPerimeter *perimeter, cons
   TalkingHorseLayerData *data = (TalkingHorseLayerData*)perimeter;
   Layer *layer = data->layer;
   // the pony is drawn at the bottom-left of the layer
+#ifdef PBL_PLATFORM_EMERY
+  const int16_t pony_size = 94;  // Scaled up 60%
+#else
   const int16_t pony_size = 59;
+#endif
   GRect bounds = layer_get_bounds(layer);
   GPoint wrap_point = layer_convert_point_to_screen(layer, GPoint(pony_size, bounds.size.h - pony_size));
   // We know the pony is at the bottom of our layer, so we don't bother worrying about text being rendered past it.

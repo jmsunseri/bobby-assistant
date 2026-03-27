@@ -106,6 +106,11 @@ static void prv_window_appear(Window* window) {
   action_bar_layer_add_to_window(rw->action_bar, window);
   action_bar_layer_set_click_config_provider(rw->action_bar, prv_click_config_provider);
   rw->time_layer = btext_layer_create(GRect(0, 5, bounds.size.w - ACTION_BAR_WIDTH, 40));
+#ifdef PBL_ROUND
+  // On round displays, shift time layer to account for action bar on the right
+  layer_set_frame(text_layer_get_layer(rw->time_layer),
+                  GRect(ACTION_BAR_WIDTH / 2, 5, bounds.size.w - ACTION_BAR_WIDTH, 40));
+#endif
   text_layer_set_text_alignment(rw->time_layer, GTextAlignmentCenter);
   text_layer_set_font(rw->time_layer, fonts_get_system_font(FONT_KEY_LECO_36_BOLD_NUMBERS));
   text_layer_set_text(rw->time_layer, "12:34");

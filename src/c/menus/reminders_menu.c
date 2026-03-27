@@ -125,8 +125,11 @@ static void prv_window_load(Window *window) {
     .draw_row = prv_draw_row,
     .select_click = prv_select_click,
   });
-  menu_layer_set_highlight_colors(data->menu_layer, SELECTION_HIGHLIGHT_COLOUR, 
+  menu_layer_set_highlight_colors(data->menu_layer, SELECTION_HIGHLIGHT_COLOUR,
     gcolor_legible_over(SELECTION_HIGHLIGHT_COLOUR));
+#ifdef PBL_ROUND
+  menu_layer_set_center_focused(data->menu_layer, true);
+#endif
 
   // Show loading animation
   data->loading_sequence = bgdraw_command_sequence_create_with_resource(RESOURCE_ID_RUNNING_PONY);
