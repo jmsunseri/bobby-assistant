@@ -332,7 +332,7 @@
           "file": "images_icons_menu_about.png",
           "name": "MENU_ICON_ABOUT",
           "type": "bitmap",
-          "memoryFormat": "2BitPalette",
+          "memoryFormat": "SmallestPalette",
           "targetPlatforms": [
             "basalt",
             "chalk",
@@ -352,7 +352,7 @@
           "file": "images_icons_menu_alarms.png",
           "name": "MENU_ICON_ALARMS",
           "type": "bitmap",
-          "memoryFormat": "2BitPalette",
+          "memoryFormat": "SmallestPalette",
           "targetPlatforms": [
             "basalt",
             "chalk",
@@ -372,7 +372,7 @@
           "file": "images_icons_menu_reminders.png",
           "name": "MENU_ICON_REMINDERS",
           "type": "bitmap",
-          "memoryFormat": "2BitPalette",
+          "memoryFormat": "SmallestPalette",
           "targetPlatforms": [
             "basalt",
             "chalk",
@@ -392,7 +392,7 @@
           "file": "images_icons_menu_timers.png",
           "name": "MENU_ICON_TIMERS",
           "type": "bitmap",
-          "memoryFormat": "2BitPalette",
+          "memoryFormat": "SmallestPalette",
           "targetPlatforms": [
             "basalt",
             "chalk",
