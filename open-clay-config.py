@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
     print('Waiting for app to start...')
     import time
-    time.sleep(3)
+    time.sleep(5)
 
     print('Opening config page...')
     sys.argv = ['pebble', 'emu-app-config', '--emulator', 'emery']

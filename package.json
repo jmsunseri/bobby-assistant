@@ -116,8 +116,7 @@
       "TELEGRAM_SEND_CODE",
       "TELEGRAM_SIGN_IN",
       "TELEGRAM_DISCONNECT",
-      "TELEGRAM_QR_LOGIN",
-      "TELEGRAM_LOGIN_METHOD",
+      "TELEGRAM_PENDING_ACTION",
       "OPENCLAW_BOT"
     ],
     "resources": {

@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-// Telegram/GramJS bundle - creates global TelegramClient, StringSession, NewMessage
-// Set USE_MOCK_TELEGRAM to true to use mock implementation for testing
-var USE_MOCK_TELEGRAM = true;
-if (USE_MOCK_TELEGRAM) {
-    require('./lib/telegram-bundle-mock.js');
-} else {
-    require('./lib/telegram-bundle.js');
-}
+require('./lib/telegram-bundle-mock.js');
 
 var location = require('./location');
 var session = require('./session');
@@ -62,6 +55,43 @@ function handleAppMessage(e) {
     }
 
     if (reminders.handleReminderMessage(data)) {
+        return;
+    }
+
+    if ('TELEGRAM_PENDING_ACTION' in data) {
+        var action = {};
+        try { action = JSON.parse(data.TELEGRAM_PENDING_ACTION); } catch (e) {}
+        if (action.action === 'send_code' && action.phoneNumber) {
+            console.log('Sending verification code to: ' + action.phoneNumber);
+            telegram.sendCode(action.phoneNumber).then(function(result) {
+                console.log('Code sent: ' + JSON.stringify(result));
+                config.setSetting('clay_telegram_auth_state', JSON.stringify({
+                    waitingForCode: true,
+                    phoneNumber: action.phoneNumber
+                }));
+                sendTelegramStatus();
+            }).catch(function(err) {
+                console.error('Failed to send code: ' + err.message);
+            });
+        } else if (action.action === 'sign_in' && action.code) {
+            console.log('Signing in with code');
+            telegram.signIn(action.code).then(function(result) {
+                console.log('Sign in result: ' + JSON.stringify(result));
+                config.setSetting('clay_telegram_auth_state', '');
+                sendTelegramStatus();
+            }).catch(function(err) {
+                console.error('Failed to sign in: ' + err.message);
+            });
+        } else if (action.action === 'disconnect') {
+            console.log('Disconnecting from Telegram');
+            telegram.logout().then(function() {
+                console.log('Disconnected');
+                config.setSetting('clay_telegram_auth_state', '');
+                sendTelegramStatus();
+            }).catch(function(err) {
+                console.error('Failed to disconnect: ' + err.message);
+            });
+        }
         return;
     }
 

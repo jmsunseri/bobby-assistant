@@ -14,28 +14,16 @@
  * limitations under the License.
  */
 
-// This function will be serialised and sent into another context, so it cannot reference anything
-// that is not textually inside it.
 module.exports = function(minified) {
     var clayConfig = this;
 
     var telegramStatusText, phoneInput, codeInput, botInput;
-    var sendCodeBtn, signInBtn, disconnectBtn, qrLoginBtn, qrCodeDisplay;
-    var loginMethodSelect;
+    var resendCodeBtn, disconnectBtn, pendingActionInput;
 
-    // Session storage key
     var SESSION_KEY = 'telegram_session';
     var BOT_USERNAME_KEY = 'openclaw_bot_username';
+    var AUTH_STATE_KEY = 'clay_telegram_auth_state';
 
-    // Session storage key
-    var SESSION_KEY = 'telegram_session';
-    var BOT_USERNAME_KEY = 'openclaw_bot_username';
-
-    // QR polling interval
-    var qrPollInterval = null;
-    var qrClient = null;
-
-    // Update status text
     function setStatus(text, isError) {
         if (telegramStatusText) {
             telegramStatusText.set(text);
@@ -47,462 +35,142 @@ module.exports = function(minified) {
         }
     }
 
-    // Load session from localStorage
     function loadSession() {
-        try {
-            return localStorage.getItem(SESSION_KEY);
-        } catch (e) {
-            return null;
-        }
+        try { return localStorage.getItem(SESSION_KEY); } catch (e) { return null; }
     }
 
-    // Save session to localStorage
-    function saveSession(sessionData) {
-        try {
-            localStorage.setItem(SESSION_KEY, sessionData);
-        } catch (e) {
-            console.error('Failed to save session:', e);
-        }
-    }
-
-    // Clear session
     function clearSession() {
-        try {
-            localStorage.removeItem(SESSION_KEY);
-        } catch (e) {
-            console.error('Failed to clear session:', e);
-        }
+        try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
     }
 
-    // Get bot username
+    function getAuthState() {
+        try { return JSON.parse(localStorage.getItem(AUTH_STATE_KEY)) || {}; } catch (e) { return {}; }
+    }
+
+    function setAuthState(state) {
+        try { localStorage.setItem(AUTH_STATE_KEY, JSON.stringify(state)); } catch (e) {}
+    }
+
+    function clearAuthState() {
+        try { localStorage.removeItem(AUTH_STATE_KEY); } catch (e) {}
+    }
+
     function getBotUsername() {
         var username = localStorage.getItem(BOT_USERNAME_KEY);
         if (!username) {
             var settings = JSON.parse(localStorage.getItem('clay-settings')) || {};
             username = settings.OPENCLAW_BOT || '@OpenClawBot';
         }
-        if (username && !username.startsWith('@')) {
-            username = '@' + username;
-        }
+        if (username && !username.startsWith('@')) { username = '@' + username; }
         return username || '@OpenClawBot';
     }
 
-    // Save bot username
     function saveBotUsername(username) {
         try {
-            if (username && !username.startsWith('@')) {
-                username = '@' + username;
-            }
+            if (username && !username.startsWith('@')) { username = '@' + username; }
             localStorage.setItem(BOT_USERNAME_KEY, username);
-        } catch (e) {
-            console.error('Failed to save bot username:', e);
+        } catch (e) {}
+    }
+
+    function setPendingAction(action) {
+        if (pendingActionInput) {
+            pendingActionInput.set(JSON.stringify(action));
         }
     }
 
-    // Get API credentials
-    function getApiCredentials() {
-        return {
-            apiId: 28689087,
-            apiHash: 'b8c1e9d4a2f7b3e5c8d9a1b2c3d4e5f6'
-        };
-    }
-
-    // Check current connection status
-    function checkTelegramStatus() {
+    function updateUI() {
         var session = loadSession();
+        var authState = getAuthState();
+
+        if (pendingActionInput) { pendingActionInput.hide(); }
+
         if (session) {
-            var botUsername = getBotUsername();
-            setStatus('Connected (' + botUsername + ')');
-            hideLoginFields();
-            notifyWatchTelegramStatus(true);
-        } else {
-            setStatus('Not connected');
-            showLoginFields();
-            notifyWatchTelegramStatus(false);
-        }
-    }
-
-    // Notify watch app of Telegram connection status
-    function notifyWatchTelegramStatus(connected) {
-        try {
-            Pebble.sendAppMessage({
-                TELEGRAM_CONNECTED: connected ? 1 : 0
-            });
-            console.log('Notified watch: Telegram connected = ' + connected);
-        } catch (e) {
-            console.log('Could not notify watch: ' + e.message);
-        }
-    }
-
-    // Show/hide fields based on login method
-    function updateLoginMethodVisibility() {
-        var useQR = loginMethodSelect ? loginMethodSelect.get() : false;
-        if (useQR) {
+            setStatus('Connected (' + getBotUsername() + ')');
             if (phoneInput) phoneInput.hide();
             if (codeInput) codeInput.hide();
-            if (sendCodeBtn) sendCodeBtn.hide();
-            if (signInBtn) signInBtn.hide();
-            if (qrLoginBtn) qrLoginBtn.show();
-            if (qrCodeDisplay) qrCodeDisplay.show();
-        } else {
-            if (phoneInput) phoneInput.show();
+            if (resendCodeBtn) resendCodeBtn.hide();
+            if (disconnectBtn) disconnectBtn.show();
+            if (botInput) botInput.show();
+        } else if (authState.waitingForCode) {
+            setStatus('A verification code was sent to ' + (authState.phoneNumber || 'your phone') + '. Enter the code below and press Save.');
+            if (phoneInput) phoneInput.hide();
             if (codeInput) codeInput.show();
-            if (sendCodeBtn) sendCodeBtn.show();
-            if (signInBtn) signInBtn.show();
-            if (qrLoginBtn) qrLoginBtn.hide();
-            if (qrCodeDisplay) qrCodeDisplay.hide();
+            if (resendCodeBtn) resendCodeBtn.show();
+            if (disconnectBtn) disconnectBtn.hide();
+            if (botInput) botInput.show();
+        } else {
+            setStatus('Not connected. Enter your phone number and save to send a verification code.');
+            if (phoneInput) phoneInput.show();
+            if (codeInput) codeInput.hide();
+            if (resendCodeBtn) resendCodeBtn.hide();
+            if (disconnectBtn) disconnectBtn.hide();
+            if (botInput) botInput.show();
         }
     }
 
-    function hideLoginFields() {
-        if (phoneInput) phoneInput.hide();
-        if (codeInput) codeInput.hide();
-        if (sendCodeBtn) sendCodeBtn.hide();
-        if (signInBtn) signInBtn.hide();
-        if (qrLoginBtn) qrLoginBtn.hide();
-        if (qrCodeDisplay) qrCodeDisplay.hide();
-        if (loginMethodSelect) loginMethodSelect.hide();
-        if (disconnectBtn) disconnectBtn.show();
-    }
-
-    function showLoginFields() {
-        if (disconnectBtn) disconnectBtn.hide();
-        if (loginMethodSelect) loginMethodSelect.show();
-        updateLoginMethodVisibility();
-    }
-
-    // Simple QR code generator (generates URL for display)
-    // This creates a visual QR code using a table-based approach
-    function generateQRCodeDisplay(text) {
-        // Use an external QR code service for simplicity
-        // The QR code will be displayed as an image
-        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(text);
-        return qrUrl;
-    }
-
-    // Start QR code login
-    function startQRLogin() {
-        setStatus('Starting QR login...');
-
-        if (typeof TelegramClient === 'undefined' || typeof StringSession === 'undefined') {
-            setStatus('QR login requires GramJS. Please use phone login instead.', true);
-            return;
-        }
-
-        var creds = getApiCredentials();
-        var stringSession = new StringSession('');
-        qrClient = new TelegramClient(stringSession, creds.apiId, creds.apiHash, {
-            connectionRetries: 5
-        });
-
-        qrClient.connect().then(function() {
-            // Export login token
-            return qrClient.invoke({
-                _: 'auth.exportLoginToken',
-                apiId: creds.apiId,
-                apiHash: creds.apiHash,
-                exceptIds: []
-            });
-        }).then(function(result) {
-            // The token is base64 encoded
-            var token = result.token;
-            var tokenBase64 = btoa(String.fromCharCode.apply(null, token));
-
-            // Create the tg://login URL
-            var loginUrl = 'tg://login?token=' + encodeURIComponent(tokenBase64);
-
-            // Display QR code
-            displayQRCode(loginUrl);
-
-            setStatus('Scan this QR code with your Telegram app');
-
-            // Start polling for login
-            pollForQRLogin(token);
-        }).catch(function(error) {
-            console.error('QR login start error:', error);
-            setStatus('Error: ' + error.message, true);
-        });
-    }
-
-    // Display QR code using external service
-    function displayQRCode(data) {
-        if (!qrCodeDisplay) return;
-
-        var qrUrl = generateQRCodeDisplay(data);
-
-        // Create an image element for the QR code
-        var container = qrCodeDisplay.$element[0];
-        container.innerHTML = '';
-
-        var img = document.createElement('img');
-        img.src = qrUrl;
-        img.alt = 'Telegram Login QR Code';
-        img.style.width = '200px';
-        img.style.height = '200px';
-        img.style.display = 'block';
-        img.style.margin = '10px auto';
-        img.style.border = '2px solid #000';
-
-        container.appendChild(img);
-
-        // Add instructions below
-        var instructions = document.createElement('div');
-        instructions.innerHTML = '1. Open Telegram on your phone<br>2. Go to Settings > Devices<br>3. Tap "Scan QR Code"<br>4. Point your camera at this code';
-        instructions.style.textAlign = 'center';
-        instructions.style.fontSize = '12px';
-        instructions.style.marginTop = '10px';
-        container.appendChild(instructions);
-
-        container.style.display = '';
-    }
-
-    // Poll for QR login completion
-    function pollForQRLogin(token) {
-        var creds = getApiCredentials();
-        var pollCount = 0;
-        var maxPolls = 60; // 2 minutes at 2 second intervals
-
-        qrPollInterval = setInterval(function() {
-            pollCount++;
-
-            if (pollCount > maxPolls) {
-                clearInterval(qrPollInterval);
-                setStatus('QR login timed out. Please try again.', true);
-                qrCodeDisplay.hide();
-                return;
-            }
-
-            // Try to import the login token (checks if user scanned)
-            qrClient.invoke({
-                _: 'auth.importLoginToken',
-                token: token
-            }).then(function(result) {
-                // Check if login is complete
-                if (result._ === 'auth.loginTokenSuccess') {
-                    // Login successful!
-                    clearInterval(qrPollInterval);
-
-                    var sessionStr = qrClient.session.save();
-                    saveSession(sessionStr);
-
-                    var botUsername = botInput ? botInput.get() : '@OpenClawBot';
-                    saveBotUsername(botUsername);
-
-                    setStatus('Connected! (' + botUsername + ')');
-
-                    qrCodeDisplay.hide();
-
-                    checkTelegramStatus();
-                } else if (result._ === 'auth.loginTokenMigrateTo') {
-                    // Need to migrate DC - handle this case
-                    clearInterval(qrPollInterval);
-                    setStatus('Please complete login in Telegram app', true);
-                }
-            }).catch(function(error) {
-                // Error is expected if token not yet scanned
-                if (error.message && error.message.includes('SESSION_PASSWORD_NEEDED')) {
-                    clearInterval(qrPollInterval);
-                    setStatus('Two-factor authentication required. Please use phone login.', true);
-                }
-                // Other errors are expected during polling (token not scanned yet)
-            });
-        }, 2000);
-    }
-
-    // Send verification code to phone
-    function sendVerificationCode() {
-        var phoneNumber = phoneInput ? phoneInput.get() : '';
-        if (!phoneNumber) {
-            setStatus('Please enter a phone number', true);
-            return;
-        }
-
-        // Normalize phone number
-        phoneNumber = phoneNumber.replace(/[\s\-\(\)]/g, '');
-        if (!phoneNumber.startsWith('+')) {
-            phoneNumber = '+' + phoneNumber;
-        }
-
-        setStatus('Sending verification code...');
-
-        if (typeof TelegramClient === 'undefined' || typeof StringSession === 'undefined') {
-            setStatus('GramJS not loaded. Please use QR login.', true);
-            return;
-        }
-
-        var creds = getApiCredentials();
-        var stringSession = new StringSession('');
-        var client = new TelegramClient(stringSession, creds.apiId, creds.apiHash, {
-            connectionRetries: 5
-        });
-
-        client.connect().then(function() {
-            return client.sendCode(phoneNumber, creds.apiId, creds.apiHash);
-        }).then(function(result) {
-            sessionStorage.setItem('telegram_phone', phoneNumber);
-            sessionStorage.setItem('telegram_phone_code_hash', result.phoneCodeHash);
-            sessionStorage.setItem('telegram_client', 'gramjs');
-
-            setStatus('Verification code sent! Enter the code above.');
-            if (codeInput) {
-                codeInput.show();
-            }
-            signInBtn.show();
-        }).catch(function(error) {
-            console.error('Send code error:', error);
-            setStatus('Error: ' + error.message, true);
-        });
-    }
-
-    // Sign in with verification code
-    function signInWithCode() {
-        var code = codeInput ? codeInput.get() : '';
-        if (!code) {
-            setStatus('Please enter the verification code', true);
-            return;
-        }
-
-        var phoneNumber = sessionStorage.getItem('telegram_phone');
-        var phoneCodeHash = sessionStorage.getItem('telegram_phone_code_hash');
-
-        if (!phoneNumber) {
-            setStatus('Phone number not found. Please restart.', true);
-            return;
-        }
-
-        setStatus('Signing in...');
-
-        if (typeof TelegramClient === 'undefined' || sessionStorage.getItem('telegram_client') !== 'gramjs') {
-            var botUsername = botInput ? botInput.get() : '@OpenClawBot';
-            saveBotUsername(botUsername);
-            setStatus('Connected! (' + botUsername + ')');
-            checkTelegramStatus();
-            return;
-        }
-
-        var creds = getApiCredentials();
-        var stringSession = new StringSession('');
-        var client = new TelegramClient(stringSession, creds.apiId, creds.apiHash, {
-            connectionRetries: 5
-        });
-
-        client.connect().then(function() {
-            return client.invoke({
-                _: 'auth.signIn',
-                phoneNumber: phoneNumber,
-                phoneCode: code,
-                phoneCodeHash: phoneCodeHash
-            });
-        }).then(function(result) {
-            var sessionStr = client.session.save();
-            saveSession(sessionStr);
-
-            var botUsername = botInput ? botInput.get() : '@OpenClawBot';
-            saveBotUsername(botUsername);
-
-            setStatus('Connected! (' + botUsername + ')');
-
-            sessionStorage.removeItem('telegram_phone');
-            sessionStorage.removeItem('telegram_phone_code_hash');
-            sessionStorage.removeItem('telegram_client');
-
-            checkTelegramStatus();
-        }).catch(function(error) {
-            console.error('Sign in error:', error);
-            if (error.message && error.message.includes('SESSION_PASSWORD_NEEDED')) {
-                setStatus('Two-factor authentication required. Please use QR login.', true);
-            } else {
-                setStatus('Error: ' + error.message, true);
-            }
-        });
-    }
-
-    // Disconnect from Telegram
-    function disconnectTelegram() {
-        // Stop any QR polling
-        if (qrPollInterval) {
-            clearInterval(qrPollInterval);
-            qrPollInterval = null;
-        }
-
-        clearSession();
-        sessionStorage.removeItem('telegram_phone');
-        sessionStorage.removeItem('telegram_phone_code_hash');
-        sessionStorage.removeItem('telegram_client');
-
-        setStatus('Not connected');
-        showLoginFields();
-        notifyWatchTelegramStatus(false);
-
-        qrCodeDisplay.hide();
+    function normalizePhone(phone) {
+        phone = phone.replace(/[\s\-\(\)]/g, '');
+        if (!phone.startsWith('+')) { phone = '+' + phone; }
+        return phone;
     }
 
     clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function() {
-        console.log('Clawd config AFTER_BUILD fired');
         telegramStatusText = clayConfig.getItemById('telegramStatus');
         phoneInput = clayConfig.getItemByMessageKey('TELEGRAM_PHONE');
         codeInput = clayConfig.getItemByMessageKey('TELEGRAM_CODE');
         botInput = clayConfig.getItemByMessageKey('OPENCLAW_BOT');
-        sendCodeBtn = clayConfig.getItemByMessageKey('TELEGRAM_SEND_CODE');
-        signInBtn = clayConfig.getItemByMessageKey('TELEGRAM_SIGN_IN');
+        resendCodeBtn = clayConfig.getItemByMessageKey('TELEGRAM_SEND_CODE');
         disconnectBtn = clayConfig.getItemByMessageKey('TELEGRAM_DISCONNECT');
-        qrLoginBtn = clayConfig.getItemByMessageKey('TELEGRAM_QR_LOGIN');
-        qrCodeDisplay = clayConfig.getItemById('qrCodeDisplay');
-        loginMethodSelect = clayConfig.getItemByMessageKey('TELEGRAM_LOGIN_METHOD');
+        pendingActionInput = clayConfig.getItemByMessageKey('TELEGRAM_PENDING_ACTION');
 
-        // Check Telegram connection status
-        checkTelegramStatus();
+        updateUI();
 
-        // Handle login method toggle
-        if (loginMethodSelect) {
-            console.log('Login method toggle found, current value: ' + loginMethodSelect.get());
-            loginMethodSelect.on('change', function() {
-                console.log('Login method changed to: ' + this.get());
-                updateLoginMethodVisibility();
-            });
-        } else {
-            console.log('Login method toggle NOT found');
-        }
-
-        // Initial visibility
-        updateLoginMethodVisibility();
-
-        // Handle QR login button
-        if (qrLoginBtn) {
-            qrLoginBtn.on('click', function() {
-                startQRLogin();
+        if (resendCodeBtn) {
+            resendCodeBtn.on('click', function() {
+                var authState = getAuthState();
+                var phoneNumber = authState.phoneNumber || (phoneInput ? phoneInput.get() : '');
+                if (!phoneNumber) {
+                    setStatus('Please enter a phone number', true);
+                    return;
+                }
+                phoneNumber = normalizePhone(phoneNumber);
+                setPendingAction({ action: 'send_code', phoneNumber: phoneNumber });
+                setStatus('Save to resend the verification code.');
             });
         }
 
-        // Handle send code button
-        if (sendCodeBtn) {
-            sendCodeBtn.on('click', function() {
-                sendVerificationCode();
-            });
-        }
-
-        // Handle sign in button
-        if (signInBtn) {
-            signInBtn.on('click', function() {
-                signInWithCode();
-            });
-        }
-
-        // Handle disconnect button
         if (disconnectBtn) {
             disconnectBtn.on('click', function() {
-                disconnectTelegram();
+                clearSession();
+                clearAuthState();
+                setPendingAction({ action: 'disconnect' });
+                updateUI();
             });
         }
 
-        // Save bot username when it changes
         if (botInput) {
             botInput.on('change', function() {
-                var botUsername = botInput.get();
-                if (botUsername) {
-                    saveBotUsername(botUsername);
+                var username = botInput.get();
+                if (username) { saveBotUsername(username); }
+            });
+        }
+
+        if (phoneInput) {
+            phoneInput.on('change', function() {
+                var phone = phoneInput.get();
+                if (phone) {
+                    setPendingAction({ action: 'send_code', phoneNumber: normalizePhone(phone) });
+                }
+            });
+        }
+
+        if (codeInput) {
+            codeInput.on('change', function() {
+                var code = codeInput.get();
+                if (code) {
+                    setPendingAction({ action: 'sign_in', code: code });
                 }
             });
         }
     });
-}
+};

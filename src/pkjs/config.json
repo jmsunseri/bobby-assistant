@@ -148,7 +148,8 @@
             },
             {
                 "type": "text",
-                "label": "Setup Instructions",
+                "id": "telegramInstructions",
+                "label": "",
                 "defaultValue": "Connect directly to OpenClaw via Telegram. In OpenClaw, enable the 'llm-task' plugin and create a skill named 'llm-task' for tools (timers, alarms, etc.) to work."
             },
             {
@@ -158,14 +159,6 @@
                 "label": "OpenClaw Bot Username",
                 "description": "Enter the username of your OpenClaw bot (e.g., @MyOpenClawBot)",
                 "defaultValue": "@OpenClawBot"
-            },
-            {
-                "type": "toggle",
-                "id": "loginMethod",
-                "messageKey": "TELEGRAM_LOGIN_METHOD",
-                "label": "Use QR Code",
-                "description": "Toggle on to log in with QR code, or off to use phone number and verification code.",
-                "defaultValue": false
             },
             {
                 "type": "input",
@@ -181,32 +174,14 @@
                 "id": "telegramCode",
                 "messageKey": "TELEGRAM_CODE",
                 "label": "Verification Code",
-                "description": "Enter the code sent to your Telegram app after clicking 'Send Code'",
+                "description": "Enter the code sent to your Telegram app",
                 "defaultValue": ""
             },
             {
                 "type": "button",
-                "id": "sendCodeBtn",
+                "id": "resendCodeBtn",
                 "messageKey": "TELEGRAM_SEND_CODE",
-                "defaultValue": "Send Code"
-            },
-            {
-                "type": "button",
-                "id": "signInBtn",
-                "messageKey": "TELEGRAM_SIGN_IN",
-                "defaultValue": "Sign In"
-            },
-            {
-                "type": "button",
-                "id": "qrLoginBtn",
-                "messageKey": "TELEGRAM_QR_LOGIN",
-                "defaultValue": "Login with QR Code"
-            },
-            {
-                "type": "text",
-                "id": "qrCodeDisplay",
-                "label": "QR Code",
-                "defaultValue": ""
+                "defaultValue": "Resend Code"
             },
             {
                 "type": "button",
@@ -215,35 +190,18 @@
                 "defaultValue": "Disconnect"
             },
             {
+                "type": "input",
+                "id": "telegramPendingAction",
+                "messageKey": "TELEGRAM_PENDING_ACTION",
+                "label": "",
+                "defaultValue": "",
+                "attributes": {"type": "hidden"}
+            },
+            {
                 "type": "text",
                 "id": "telegramStatus",
                 "label": "Status",
                 "defaultValue": "Not connected"
-            }
-        ]
-    },
-    {
-        "type": "section",
-        "items": [
-            {
-                "type": "heading",
-                "defaultValue": "Advanced"
-            },
-            {
-                "type": "text",
-                "id": "telegramApiId",
-                "messageKey": "TELEGRAM_API_ID",
-                "label": "Telegram API ID (optional)",
-                "description": "Override with your own API ID from my.telegram.org",
-                "defaultValue": ""
-            },
-            {
-                "type": "text",
-                "id": "telegramApiHash",
-                "messageKey": "TELEGRAM_API_HASH",
-                "label": "Telegram API Hash (optional)",
-                "description": "Override with your own API Hash from my.telegram.org",
-                "defaultValue": ""
             }
         ]
     },
