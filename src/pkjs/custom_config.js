@@ -19,18 +19,8 @@
 module.exports = function(minified) {
     var clayConfig = this;
 
-    // Telegram connection status
-    var telegramStatusText = clayConfig.getItemByMessageKey('telegramStatus');
-    var phoneInput = clayConfig.getItemByMessageKey('TELEGRAM_PHONE');
-    var codeInput = clayConfig.getItemByMessageKey('TELEGRAM_CODE');
-    var botInput = clayConfig.getItemByMessageKey('OPENCLAW_BOT');
-    var apiIdInput = clayConfig.getItemByMessageKey('TELEGRAM_API_ID');
-    var apiHashInput = clayConfig.getItemByMessageKey('TELEGRAM_API_HASH');
-    var sendCodeBtn = clayConfig.getItemByMessageKey('TELEGRAM_SEND_CODE');
-    var signInBtn = clayConfig.getItemByMessageKey('TELEGRAM_SIGN_IN');
-    var disconnectBtn = clayConfig.getItemByMessageKey('TELEGRAM_DISCONNECT');
-    var qrLoginBtn = clayConfig.getItemByMessageKey('TELEGRAM_QR_LOGIN');
-    var qrCodeDisplay = clayConfig.getItemByMessageKey('qrCodeDisplay');
+    var telegramStatusText, phoneInput, codeInput, botInput, apiIdInput, apiHashInput;
+    var sendCodeBtn, signInBtn, disconnectBtn, qrLoginBtn, qrCodeDisplay;
 
     // Session storage key
     var SESSION_KEY = 'telegram_session';
@@ -437,6 +427,18 @@ module.exports = function(minified) {
     }
 
     clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function() {
+        telegramStatusText = clayConfig.getItemByMessageKey('telegramStatus');
+        phoneInput = clayConfig.getItemByMessageKey('TELEGRAM_PHONE');
+        codeInput = clayConfig.getItemByMessageKey('TELEGRAM_CODE');
+        botInput = clayConfig.getItemByMessageKey('OPENCLAW_BOT');
+        apiIdInput = clayConfig.getItemByMessageKey('TELEGRAM_API_ID');
+        apiHashInput = clayConfig.getItemByMessageKey('TELEGRAM_API_HASH');
+        sendCodeBtn = clayConfig.getItemByMessageKey('TELEGRAM_SEND_CODE');
+        signInBtn = clayConfig.getItemByMessageKey('TELEGRAM_SIGN_IN');
+        disconnectBtn = clayConfig.getItemByMessageKey('TELEGRAM_DISCONNECT');
+        qrLoginBtn = clayConfig.getItemByMessageKey('TELEGRAM_QR_LOGIN');
+        qrCodeDisplay = clayConfig.getItemByMessageKey('qrCodeDisplay');
+
         // Check Telegram connection status
         checkTelegramStatus();
 
