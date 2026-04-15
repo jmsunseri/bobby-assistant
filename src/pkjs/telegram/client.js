@@ -42,10 +42,8 @@ function initClient() {
         try {
             var storedSession = session.loadSession();
 
-            // Get API credentials from settings or use defaults
-            var settings = JSON.parse(localStorage.getItem('clay-settings')) || {};
-            var apiId = settings.TELEGRAM_API_ID || DEFAULT_API_ID;
-            var apiHash = settings.TELEGRAM_API_HASH || DEFAULT_API_HASH;
+            var apiId = DEFAULT_API_ID;
+            var apiHash = DEFAULT_API_HASH;
 
             // Use GramJS StringSession
             // Note: In actual implementation, GramJS would be bundled or loaded

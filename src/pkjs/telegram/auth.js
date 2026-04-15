@@ -199,17 +199,15 @@ function logout() {
  * @returns {number}
  */
 function getApiId() {
-    var settings = JSON.parse(localStorage.getItem('clay-settings')) || {};
-    return settings.TELEGRAM_API_ID || 28689087;
+    return 28689087;
 }
 
 /**
- * Get API Hash from settings or default.
+ * Get API Hash.
  * @returns {string}
  */
 function getApiHash() {
-    var settings = JSON.parse(localStorage.getItem('clay-settings')) || {};
-    return settings.TELEGRAM_API_HASH || 'b8c1e9d4a2f7b3e5c8d9a1b2c3d4e5f6';
+    return 'b8c1e9d4a2f7b3e5c8d9a1b2c3d4e5f6';
 }
 
 /**

@@ -167,9 +167,8 @@ Session.prototype.sendToOpenClaw = function(message) {
 Session.prototype.sendViaGramJS = function(message, botUsername, resolve, reject) {
     var self = this;
     var sessionStr = telegram.loadSession();
-    var settings = getSettings();
-    var apiId = settings.TELEGRAM_API_ID ? parseInt(settings.TELEGRAM_API_ID) : 28689087;
-    var apiHash = settings.TELEGRAM_API_HASH || 'b8c1e9d4a2f7b3e5c8d9a1b2c3d4e5f6';
+    var apiId = 28689087;
+    var apiHash = 'b8c1e9d4a2f7b3e5c8d9a1b2c3d4e5f6';
 
     var stringSession = new StringSession(sessionStr);
     var client = new TelegramClient(stringSession, apiId, apiHash, {

@@ -19,8 +19,13 @@
 module.exports = function(minified) {
     var clayConfig = this;
 
-    var telegramStatusText, phoneInput, codeInput, botInput, apiIdInput, apiHashInput;
+    var telegramStatusText, phoneInput, codeInput, botInput;
     var sendCodeBtn, signInBtn, disconnectBtn, qrLoginBtn, qrCodeDisplay;
+    var loginMethodSelect;
+
+    // Session storage key
+    var SESSION_KEY = 'telegram_session';
+    var BOT_USERNAME_KEY = 'openclaw_bot_username';
 
     // Session storage key
     var SESSION_KEY = 'telegram_session';
@@ -33,11 +38,11 @@ module.exports = function(minified) {
     // Update status text
     function setStatus(text, isError) {
         if (telegramStatusText) {
-            telegramStatusText.set('value', text);
+            telegramStatusText.set(text);
             if (isError) {
-                telegramStatusText.element.style.color = 'red';
+                telegramStatusText.$element[0].style.color = 'red';
             } else {
-                telegramStatusText.element.style.color = '';
+                telegramStatusText.$element[0].style.color = '';
             }
         }
     }
@@ -96,11 +101,9 @@ module.exports = function(minified) {
 
     // Get API credentials
     function getApiCredentials() {
-        var apiId = apiIdInput ? parseInt(apiIdInput.get('value')) || null : null;
-        var apiHash = apiHashInput ? apiHashInput.get('value') || null : null;
         return {
-            apiId: apiId || 28689087,
-            apiHash: apiHash || 'b8c1e9d4a2f7b3e5c8d9a1b2c3d4e5f6'
+            apiId: 28689087,
+            apiHash: 'b8c1e9d4a2f7b3e5c8d9a1b2c3d4e5f6'
         };
     }
 
@@ -114,9 +117,7 @@ module.exports = function(minified) {
             notifyWatchTelegramStatus(true);
         } else {
             setStatus('Not connected');
-            if (disconnectBtn) {
-                disconnectBtn.element.style.display = 'none';
-            }
+            showLoginFields();
             notifyWatchTelegramStatus(false);
         }
     }
@@ -133,23 +134,41 @@ module.exports = function(minified) {
         }
     }
 
-    // Hide login fields when connected
-    function hideLoginFields() {
-        if (phoneInput) phoneInput.element.style.display = 'none';
-        if (codeInput) codeInput.element.style.display = 'none';
-        if (sendCodeBtn) sendCodeBtn.element.style.display = 'none';
-        if (signInBtn) signInBtn.element.style.display = 'none';
-        if (qrLoginBtn) qrLoginBtn.element.style.display = 'none';
-        if (qrCodeDisplay) qrCodeDisplay.element.style.display = 'none';
+    // Show/hide fields based on login method
+    function updateLoginMethodVisibility() {
+        var useQR = loginMethodSelect ? loginMethodSelect.get() : false;
+        if (useQR) {
+            if (phoneInput) phoneInput.hide();
+            if (codeInput) codeInput.hide();
+            if (sendCodeBtn) sendCodeBtn.hide();
+            if (signInBtn) signInBtn.hide();
+            if (qrLoginBtn) qrLoginBtn.show();
+            if (qrCodeDisplay) qrCodeDisplay.show();
+        } else {
+            if (phoneInput) phoneInput.show();
+            if (codeInput) codeInput.show();
+            if (sendCodeBtn) sendCodeBtn.show();
+            if (signInBtn) signInBtn.show();
+            if (qrLoginBtn) qrLoginBtn.hide();
+            if (qrCodeDisplay) qrCodeDisplay.hide();
+        }
     }
 
-    // Show login fields when disconnected
+    function hideLoginFields() {
+        if (phoneInput) phoneInput.hide();
+        if (codeInput) codeInput.hide();
+        if (sendCodeBtn) sendCodeBtn.hide();
+        if (signInBtn) signInBtn.hide();
+        if (qrLoginBtn) qrLoginBtn.hide();
+        if (qrCodeDisplay) qrCodeDisplay.hide();
+        if (loginMethodSelect) loginMethodSelect.hide();
+        if (disconnectBtn) disconnectBtn.show();
+    }
+
     function showLoginFields() {
-        if (phoneInput) phoneInput.element.style.display = '';
-        if (sendCodeBtn) sendCodeBtn.element.style.display = '';
-        if (signInBtn) signInBtn.element.style.display = '';
-        if (qrLoginBtn) qrLoginBtn.element.style.display = '';
-        if (disconnectBtn) disconnectBtn.element.style.display = 'none';
+        if (disconnectBtn) disconnectBtn.hide();
+        if (loginMethodSelect) loginMethodSelect.show();
+        updateLoginMethodVisibility();
     }
 
     // Simple QR code generator (generates URL for display)
@@ -212,7 +231,7 @@ module.exports = function(minified) {
         var qrUrl = generateQRCodeDisplay(data);
 
         // Create an image element for the QR code
-        var container = qrCodeDisplay.element;
+        var container = qrCodeDisplay.$element[0];
         container.innerHTML = '';
 
         var img = document.createElement('img');
@@ -249,9 +268,7 @@ module.exports = function(minified) {
             if (pollCount > maxPolls) {
                 clearInterval(qrPollInterval);
                 setStatus('QR login timed out. Please try again.', true);
-                if (qrCodeDisplay) {
-                    qrCodeDisplay.element.style.display = 'none';
-                }
+                qrCodeDisplay.hide();
                 return;
             }
 
@@ -268,14 +285,12 @@ module.exports = function(minified) {
                     var sessionStr = qrClient.session.save();
                     saveSession(sessionStr);
 
-                    var botUsername = botInput ? botInput.get('value') : '@OpenClawBot';
+                    var botUsername = botInput ? botInput.get() : '@OpenClawBot';
                     saveBotUsername(botUsername);
 
                     setStatus('Connected! (' + botUsername + ')');
 
-                    if (qrCodeDisplay) {
-                        qrCodeDisplay.element.style.display = 'none';
-                    }
+                    qrCodeDisplay.hide();
 
                     checkTelegramStatus();
                 } else if (result._ === 'auth.loginTokenMigrateTo') {
@@ -296,7 +311,7 @@ module.exports = function(minified) {
 
     // Send verification code to phone
     function sendVerificationCode() {
-        var phoneNumber = phoneInput ? phoneInput.get('value') : '';
+        var phoneNumber = phoneInput ? phoneInput.get() : '';
         if (!phoneNumber) {
             setStatus('Please enter a phone number', true);
             return;
@@ -330,11 +345,9 @@ module.exports = function(minified) {
 
             setStatus('Verification code sent! Enter the code above.');
             if (codeInput) {
-                codeInput.element.style.display = '';
+                codeInput.show();
             }
-            if (signInBtn) {
-                signInBtn.element.style.display = '';
-            }
+            signInBtn.show();
         }).catch(function(error) {
             console.error('Send code error:', error);
             setStatus('Error: ' + error.message, true);
@@ -343,7 +356,7 @@ module.exports = function(minified) {
 
     // Sign in with verification code
     function signInWithCode() {
-        var code = codeInput ? codeInput.get('value') : '';
+        var code = codeInput ? codeInput.get() : '';
         if (!code) {
             setStatus('Please enter the verification code', true);
             return;
@@ -360,7 +373,7 @@ module.exports = function(minified) {
         setStatus('Signing in...');
 
         if (typeof TelegramClient === 'undefined' || sessionStorage.getItem('telegram_client') !== 'gramjs') {
-            var botUsername = botInput ? botInput.get('value') : '@OpenClawBot';
+            var botUsername = botInput ? botInput.get() : '@OpenClawBot';
             saveBotUsername(botUsername);
             setStatus('Connected! (' + botUsername + ')');
             checkTelegramStatus();
@@ -384,7 +397,7 @@ module.exports = function(minified) {
             var sessionStr = client.session.save();
             saveSession(sessionStr);
 
-            var botUsername = botInput ? botInput.get('value') : '@OpenClawBot';
+            var botUsername = botInput ? botInput.get() : '@OpenClawBot';
             saveBotUsername(botUsername);
 
             setStatus('Connected! (' + botUsername + ')');
@@ -421,26 +434,38 @@ module.exports = function(minified) {
         showLoginFields();
         notifyWatchTelegramStatus(false);
 
-        if (qrCodeDisplay) {
-            qrCodeDisplay.element.style.display = 'none';
-        }
+        qrCodeDisplay.hide();
     }
 
     clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function() {
-        telegramStatusText = clayConfig.getItemByMessageKey('telegramStatus');
+        console.log('Clawd config AFTER_BUILD fired');
+        telegramStatusText = clayConfig.getItemById('telegramStatus');
         phoneInput = clayConfig.getItemByMessageKey('TELEGRAM_PHONE');
         codeInput = clayConfig.getItemByMessageKey('TELEGRAM_CODE');
         botInput = clayConfig.getItemByMessageKey('OPENCLAW_BOT');
-        apiIdInput = clayConfig.getItemByMessageKey('TELEGRAM_API_ID');
-        apiHashInput = clayConfig.getItemByMessageKey('TELEGRAM_API_HASH');
         sendCodeBtn = clayConfig.getItemByMessageKey('TELEGRAM_SEND_CODE');
         signInBtn = clayConfig.getItemByMessageKey('TELEGRAM_SIGN_IN');
         disconnectBtn = clayConfig.getItemByMessageKey('TELEGRAM_DISCONNECT');
         qrLoginBtn = clayConfig.getItemByMessageKey('TELEGRAM_QR_LOGIN');
-        qrCodeDisplay = clayConfig.getItemByMessageKey('qrCodeDisplay');
+        qrCodeDisplay = clayConfig.getItemById('qrCodeDisplay');
+        loginMethodSelect = clayConfig.getItemByMessageKey('TELEGRAM_LOGIN_METHOD');
 
         // Check Telegram connection status
         checkTelegramStatus();
+
+        // Handle login method toggle
+        if (loginMethodSelect) {
+            console.log('Login method toggle found, current value: ' + loginMethodSelect.get());
+            loginMethodSelect.on('change', function() {
+                console.log('Login method changed to: ' + this.get());
+                updateLoginMethodVisibility();
+            });
+        } else {
+            console.log('Login method toggle NOT found');
+        }
+
+        // Initial visibility
+        updateLoginMethodVisibility();
 
         // Handle QR login button
         if (qrLoginBtn) {
@@ -473,7 +498,7 @@ module.exports = function(minified) {
         // Save bot username when it changes
         if (botInput) {
             botInput.on('change', function() {
-                var botUsername = botInput.get('value');
+                var botUsername = botInput.get();
                 if (botUsername) {
                     saveBotUsername(botUsername);
                 }
