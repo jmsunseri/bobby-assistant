@@ -40,10 +40,7 @@ function sendCode(phoneNumber) {
 
         if (client.getClient()) {
             // Use GramJS to send code
-            client.getClient().sendCode(phoneNumber, {
-                apiId: getApiId(),
-                apiHash: getApiHash()
-            }).then(function(result) {
+            client.getClient().sendCode(phoneNumber).then(function(result) {
                 authState.phoneCodeHash = result.phoneCodeHash;
                 authState.isWaitingForCode = true;
                 resolve({
@@ -192,22 +189,6 @@ function logout() {
             resolve();
         }).catch(reject);
     });
-}
-
-/**
- * Get API ID from settings or default.
- * @returns {number}
- */
-function getApiId() {
-    return 28689087;
-}
-
-/**
- * Get API Hash.
- * @returns {string}
- */
-function getApiHash() {
-    return 'b8c1e9d4a2f7b3e5c8d9a1b2c3d4e5f6';
 }
 
 /**

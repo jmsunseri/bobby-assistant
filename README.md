@@ -40,13 +40,7 @@ OpenClaw instances behind home firewalls.
 
 ### 2. Telegram API Credentials
 
-You can use shared API credentials (built into the app) or get your own from
-[my.telegram.org](https://my.telegram.org):
-
-1. Log in with your phone number
-2. Go to "API development tools"
-3. Create a new application
-4. Note your `api_id` and `api_hash`
+Built-in shared API credentials are used by default. No setup required.
 
 ### 3. Building the App
 
@@ -57,12 +51,10 @@ You can use shared API credentials (built into the app) or get your own from
 
 ### 4. Configuration
 
-1. Open the Clawd settings on your phone
-2. Enter your Telegram phone number (international format, e.g., `+1234567890`)
-3. Click "Send Code" to receive a verification code via Telegram
-4. Enter the code and click "Sign In"
-5. Enter your OpenClaw bot username (e.g., `@MyOpenClawBot`)
-6. Save settings
+1. Open the application settings on your phone (or run `./open-clay-config.py` in the emulator)
+2. Enter your OpenClaw bot username (e.g., `@MyClawBot`) and Telegram phone number in international format (e.g., `+1234567890`)
+3. Press Save — a verification code will be sent to your Telegram app
+4. Re-open the settings, enter the verification code, and press Save
 
 ## Development
 
@@ -107,7 +99,6 @@ Tools execute locally on the phone app:
 ## Security Considerations
 
 - Telegram session is stored in localStorage (consider encryption for production)
-- Shared API credentials carry risk of abuse - consider using your own
 - Phone numbers are used only during authentication, not stored
 
 ## Contributing

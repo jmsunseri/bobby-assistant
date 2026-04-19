@@ -23,11 +23,6 @@
 var session = require('./session');
 var messages = require('./messages');
 
-// Telegram API credentials
-// These are shared credentials - users can override with their own
-var DEFAULT_API_ID = 28689087;
-var DEFAULT_API_HASH = 'b8c1e9d4a2f7b3e5c8d9a1b2c3d4e5f6';
-
 // Client instance
 var client = null;
 var isConnected = false;
@@ -42,15 +37,9 @@ function initClient() {
         try {
             var storedSession = session.loadSession();
 
-            var apiId = DEFAULT_API_ID;
-            var apiHash = DEFAULT_API_HASH;
-
-            // Use GramJS StringSession
-            // Note: In actual implementation, GramJS would be bundled or loaded
-            // For now, we'll check if it's available
             if (typeof TelegramClient !== 'undefined') {
                 var stringSession = new StringSession(storedSession || '');
-                client = new TelegramClient(stringSession, apiId, apiHash, {
+                client = new TelegramClient(stringSession, process.env.TELEGRAM_APP_ID || 0, process.env.TELEGRAM_APP_HASH || '', {
                     connectionRetries: 5,
                 });
 

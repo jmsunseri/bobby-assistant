@@ -166,26 +166,14 @@ Session.prototype.sendToOpenClaw = function(message) {
 
 Session.prototype.sendViaGramJS = function(message, botUsername, resolve, reject) {
     var self = this;
-    var sessionStr = telegram.loadSession();
-    var apiId = 28689087;
-    var apiHash = 'b8c1e9d4a2f7b3e5c8d9a1b2c3d4e5f6';
+    var cleanUsername = botUsername.replace(/^@/, '');
 
-    var stringSession = new StringSession(sessionStr);
-    var client = new TelegramClient(stringSession, apiId, apiHash, {
-        connectionRetries: 5
-    });
-
-    client.connect().then(function() {
-        // Remove @ prefix for API call
-        var cleanUsername = botUsername.replace(/^@/, '');
-
-        // Send message
+    telegram.initClient().then(function() {
+        var client = telegram.getClient();
         return client.sendMessage(cleanUsername, { message: message });
     }).then(function(result) {
         console.log('Message sent to', botUsername);
-
-        // Start listening for response
-        self.listenForResponse(client, botUsername, resolve, reject);
+        self.listenForResponse(telegram.getClient(), botUsername, resolve, reject);
     }).catch(function(error) {
         console.error('GramJS error:', error);
         reject(error);
