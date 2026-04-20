@@ -148,8 +148,8 @@
           "type": "bitmap"
         },
         {
-          "file": "images_root_screen_pony.pdc",
-          "name": "ROOT_SCREEN_PONY",
+          "file": "images_root_screen_lobster.pdc",
+          "name": "ROOT_SCREEN_LOBSTER",
           "type": "raw",
           "targetPlatforms": [
             "basalt",
@@ -158,8 +158,8 @@
           ]
         },
         {
-          "file": "images_root_screen_pony_large.pdc",
-          "name": "ROOT_SCREEN_PONY",
+          "file": "images_root_screen_lobster_large.pdc",
+          "name": "ROOT_SCREEN_LOBSTER",
           "type": "raw",
           "targetPlatforms": [
             "emery"
@@ -167,7 +167,7 @@
         },
         {
           "file": "images_sleeping_pony.pdc",
-          "name": "SLEEPING_PONY",
+          "name": "SLEEPING_LOBSTER",
           "type": "raw"
         },
         {
@@ -202,12 +202,12 @@
         },
         {
           "file": "animations_tired_pony.pdcs",
-          "name": "TIRED_PONY",
+          "name": "TIRED_LOBSTER",
           "type": "raw"
         },
         {
           "file": "animations_running_pony.pdcs",
-          "name": "RUNNING_PONY",
+          "name": "RUNNING_LOBSTER",
           "type": "raw"
         },
         {
@@ -222,7 +222,7 @@
         },
         {
           "file": "images_failed_pony.pdc",
-          "name": "FAILED_PONY",
+          "name": "FAILED_LOBSTER",
           "type": "raw"
         },
         {
@@ -447,7 +447,7 @@
         },
         {
           "file": "images_fence_pony_color.png",
-          "name": "FENCE_PONY_BITMAP",
+          "name": "FENCE_LOBSTER_BITMAP",
           "type": "bitmap",
           "memoryFormat": "2BitPalette",
           "targetPlatforms": [
@@ -458,7 +458,7 @@
         },
         {
           "file": "images_fence_pony_bw.png",
-          "name": "FENCE_PONY_BITMAP",
+          "name": "FENCE_LOBSTER_BITMAP",
           "type": "bitmap",
           "memoryFormat": "1BitPalette",
           "targetPlatforms": [

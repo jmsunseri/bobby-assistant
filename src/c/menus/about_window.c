@@ -79,7 +79,7 @@ static void prv_window_load(Window* window) {
   formatted_text_layer_set_text(data->text_layer, data->about_text);
   GSize text_size = formatted_text_layer_get_content_size(data->text_layer);
 
-  data->bobby_image = bgbitmap_create_with_resource(RESOURCE_ID_FENCE_PONY_BITMAP);
+  data->bobby_image = bgbitmap_create_with_resource(RESOURCE_ID_FENCE_LOBSTER_BITMAP);
   GSize image_size = gbitmap_get_bounds(data->bobby_image).size;
   image_size.h += 40; // add back the space at the top
   data->bitmap_layer = bitmap_layer_create(GRect((window_bounds.size.w - image_size.w) / 2, text_size.h, image_size.w, image_size.h));

@@ -31,8 +31,8 @@ typedef struct {
   TextLayer *empty_text_layer;
   bool for_timers;
   EventHandle tick_handle;
-  GDrawCommandImage *sleeping_horse_image;
-  VectorLayer *sleeping_horse_layer;
+  GDrawCommandImage *sleeping_lobster_image;
+  VectorLayer *sleeping_lobster_layer;
 } AlarmMenuWindowData;
 
 static void prv_window_load(Window* window);
@@ -80,8 +80,8 @@ static void prv_window_load(Window* window) {
 #ifdef PBL_ROUND
   menu_layer_set_center_focused(data->menu_layer, true);
 #endif
-  data->sleeping_horse_image = NULL;
-  data->sleeping_horse_layer = NULL;
+  data->sleeping_lobster_image = NULL;
+  data->sleeping_lobster_layer = NULL;
   data->status_bar = bstatus_bar_layer_create();
   data->empty_text_layer = btext_layer_create(GRect(10, 20, window_bounds.size.w - 20, 80));
   text_layer_set_text_color(data->empty_text_layer, gcolor_legible_over(ACCENT_COLOUR));
@@ -109,13 +109,13 @@ static void prv_show_empty(Window *window) {
   layer_remove_from_parent(menu_layer_get_layer(data->menu_layer));
   window_set_click_config_provider(window, NULL);
 
-  data->sleeping_horse_image = bgdraw_command_image_create_with_resource(RESOURCE_ID_SLEEPING_PONY);
-  data->sleeping_horse_layer = vector_layer_create(GRect(window_bounds.size.w / 2 - 25, window_bounds.size.h - 55, 50, 50));
-  vector_layer_set_vector(data->sleeping_horse_layer, data->sleeping_horse_image);
+  data->sleeping_lobster_image = bgdraw_command_image_create_with_resource(RESOURCE_ID_SLEEPING_LOBSTER);
+  data->sleeping_lobster_layer = vector_layer_create(GRect(window_bounds.size.w / 2 - 25, window_bounds.size.h - 55, 50, 50));
+  vector_layer_set_vector(data->sleeping_lobster_layer, data->sleeping_lobster_image);
   window_set_background_color(window, BRANDED_BACKGROUND_COLOUR);
   clawd_status_bar_result_pane_config(data->status_bar);
   layer_add_child(root_layer, text_layer_get_layer(data->empty_text_layer));
-  layer_add_child(root_layer, vector_layer_get_layer(data->sleeping_horse_layer));
+  layer_add_child(root_layer, vector_layer_get_layer(data->sleeping_lobster_layer));
 
 }
 
@@ -124,11 +124,11 @@ static void prv_window_unload(Window* window) {
   menu_layer_destroy(data->menu_layer);
   status_bar_layer_destroy(data->status_bar);
   text_layer_destroy(data->empty_text_layer);
-  if (data->sleeping_horse_layer != NULL) {
-    vector_layer_destroy(data->sleeping_horse_layer);
+  if (data->sleeping_lobster_layer != NULL) {
+    vector_layer_destroy(data->sleeping_lobster_layer);
   }
-  if (data->sleeping_horse_image != NULL) {
-    gdraw_command_image_destroy(data->sleeping_horse_image);
+  if (data->sleeping_lobster_image != NULL) {
+    gdraw_command_image_destroy(data->sleeping_lobster_image);
   }
   window_destroy(window);
   free(data);

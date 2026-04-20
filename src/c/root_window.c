@@ -18,16 +18,28 @@
 #include <pebble-events/pebble-events.h>
 
 #include "root_window.h"
-#include "talking_horse_layer.h"
+#include "talking_lobster_layer.h"
 #include "converse/session_window.h"
 #include "menus/root_menu.h"
 #include "util/logging.h"
 #include "util/style.h"
-#include "util/time.h"
 #include "util/memory/malloc.h"
 #include "util/memory/sdk.h"
-#include "version/version.h"
 #include "vibes/haptic_feedback.h"
+
+static const char* const PRV_GREETINGS[] = {
+  "Hey!",
+  "Yo!",
+  "Sup?",
+  "Hiya!",
+  "Hello!",
+  "Hej!",
+  "Hola!",
+  "Heyo!",
+  "Howdy!",
+  "Oi!",
+};
+#define PRV_GREETINGS_COUNT 10
 
 struct RootWindow {
   Window* window;
@@ -36,15 +48,10 @@ struct RootWindow {
   GBitmap* question_icon;
   GBitmap* dictation_icon;
   GBitmap* more_icon;
-  TextLayer* time_layer;
-  TextLayer* version_layer;
-  TalkingHorseLayer* talking_horse_layer;
-  EventHandle event_handle;
+  TalkingLobsterLayer* talking_lobster_layer;
   EventHandle app_message_handle;
-  char time_string[6];
-  char version_string[9];
   char** sample_prompts;
-  bool talking_horse_overridden;
+  bool talking_lobster_overridden;
 };
 
 static void prv_window_load(Window* window);
@@ -54,7 +61,6 @@ static void prv_click_config_provider(void *context);
 static void prv_prompt_clicked(ClickRecognizerRef recognizer, void *context);
 static void prv_more_clicked(ClickRecognizerRef recognizer, void* context);
 static void prv_up_clicked(ClickRecognizerRef recognizer, void *context);
-static void prv_time_changed(struct tm *tick_time, TimeUnits time_changed, void *context);
 static int prv_load_suggestions(char*** suggestions);
 static void prv_action_menu_closed(ActionMenu *action_menu, const ActionMenuItem *performed_action, void *context);
 static void prv_suggestion_clicked(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
@@ -105,48 +111,16 @@ static void prv_window_appear(Window* window) {
   action_bar_layer_set_icon(rw->action_bar, BUTTON_ID_DOWN, rw->more_icon);
   action_bar_layer_add_to_window(rw->action_bar, window);
   action_bar_layer_set_click_config_provider(rw->action_bar, prv_click_config_provider);
-  rw->time_layer = btext_layer_create(GRect(0, 5, bounds.size.w - ACTION_BAR_WIDTH, 40));
 #ifdef PBL_ROUND
-  // On round displays, shift time layer to account for action bar on the right
-  layer_set_frame(text_layer_get_layer(rw->time_layer),
-                  GRect(ACTION_BAR_WIDTH / 2, 5, bounds.size.w - ACTION_BAR_WIDTH, 40));
-#endif
-  text_layer_set_text_alignment(rw->time_layer, GTextAlignmentCenter);
-  text_layer_set_font(rw->time_layer, fonts_get_system_font(FONT_KEY_LECO_36_BOLD_NUMBERS));
-  text_layer_set_text(rw->time_layer, "12:34");
-  text_layer_set_background_color(rw->time_layer, GColorClear);
-  layer_add_child(window_get_root_layer(rw->window), (Layer *)rw->time_layer);
-  // Use dynamic layer height on emery to anchor pony to bottom
-  // Use fixed height on other platforms (basalt/diorite/chalk/gabbro)
-#ifdef PBL_PLATFORM_EMERY
-  int16_t layer_height = bounds.size.h - 56;
+  rw->talking_lobster_layer = talking_lobster_layer_create(GRect(0, 0, bounds.size.w, bounds.size.h));
 #else
-  int16_t layer_height = 112;
+  rw->talking_lobster_layer = talking_lobster_layer_create(GRect(0, 0, bounds.size.w - ACTION_BAR_WIDTH, bounds.size.h));
 #endif
-  rw->talking_horse_layer = talking_horse_layer_create(GRect(0, 56, bounds.size.w - ACTION_BAR_WIDTH, layer_height));
-  layer_add_child(window_get_root_layer(rw->window), (Layer *)rw->talking_horse_layer);
-  rw->talking_horse_overridden = false;
-  if (version_is_updated() || rand() < RAND_MAX / 10) {
-    rw->talking_horse_overridden = true;
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Try holding select in chat!");
-  }
+  layer_add_child(window_get_root_layer(rw->window), (Layer *)rw->talking_lobster_layer);
+  rw->talking_lobster_overridden = false;
+  const char* greeting = PRV_GREETINGS[rand() % PRV_GREETINGS_COUNT];
+  talking_lobster_layer_set_text(rw->talking_lobster_layer, greeting);
 
-  VersionInfo version_info = version_get_current();
-  snprintf(rw->version_string, sizeof(rw->version_string), "v%d.%d", version_info.major, version_info.minor);
-  rw->version_string[sizeof(rw->version_string) - 1] = '\0';
-  rw->version_layer = btext_layer_create(GRect(0, bounds.size.h - 18, bounds.size.w - ACTION_BAR_WIDTH - 4, 18));
-  text_layer_set_font(rw->version_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
-  text_layer_set_text_alignment(rw->version_layer, GTextAlignmentRight);
-  text_layer_set_background_color(rw->version_layer, GColorClear);
-  text_layer_set_text(rw->version_layer, rw->version_string);
-  layer_add_child(window_get_root_layer(rw->window), (Layer *)rw->version_layer);
-
-
-  if (!rw->event_handle) {
-    rw->event_handle = events_tick_timer_service_subscribe_context(MINUTE_UNIT, prv_time_changed, rw);
-    time_t now = time(NULL);
-    prv_time_changed(localtime(&now), MINUTE_UNIT, rw);
-  }
   if (!rw->app_message_handle) {
     rw->app_message_handle = events_app_message_register_inbox_received(prv_app_message_handler, rw);
   }
@@ -156,10 +130,6 @@ static void prv_window_appear(Window* window) {
 static void prv_window_disappear(Window* window) {
   size_t heap_size = heap_bytes_free();
   RootWindow* rw = window_get_user_data(window);
-  if (rw->event_handle) {
-    events_tick_timer_service_unsubscribe(rw->event_handle);
-    rw->event_handle = NULL;
-  }
   if (rw->app_message_handle) {
     events_app_message_unsubscribe(rw->app_message_handle);
   }
@@ -167,9 +137,7 @@ static void prv_window_disappear(Window* window) {
   gbitmap_destroy(rw->question_icon);
   gbitmap_destroy(rw->dictation_icon);
   gbitmap_destroy(rw->more_icon);
-  text_layer_destroy(rw->time_layer);
-  text_layer_destroy(rw->version_layer);
-  talking_horse_layer_destroy(rw->talking_horse_layer);
+  talking_lobster_layer_destroy(rw->talking_lobster_layer);
   CLAWD_LOG(APP_LOG_LEVEL_DEBUG, "Window disappeared. Heap usage decreased %d bytes", heap_bytes_free() - heap_size);
 }
 
@@ -180,28 +148,10 @@ static void prv_app_message_handler(DictionaryIterator *iter, void *context) {
     return;
   }
   if (tuple->value->int32 == 1) {
-    rw->talking_horse_overridden = true;
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Cobble has many Bobby bugs.");
+    rw->talking_lobster_overridden = true;
+    talking_lobster_layer_set_text(rw->talking_lobster_layer, "Uh oh!");
     window_set_background_color(rw->window, COLOR_FALLBACK(GColorRed, GColorDarkGray));
     vibe_haptic_feedback();
-  }
-}
-
-static void prv_time_changed(struct tm *tick_time, TimeUnits time_changed, void *context) {
-  RootWindow* rw = context;
-  format_time(rw->time_string, sizeof(rw->time_string), tick_time);
-  text_layer_set_text(rw->time_layer, rw->time_string);
-  if (rw->talking_horse_overridden) {
-    return;
-  }
-  if (tick_time->tm_hour >= 6 && tick_time->tm_hour < 12) {
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Good morning!");
-  } else if (tick_time->tm_hour >= 12 && tick_time->tm_hour < 18) {
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Good afternoon!");
-  } else if (tick_time->tm_hour >= 18 && tick_time->tm_hour < 22) {
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Good evening!");
-  } else {
-    talking_horse_layer_set_text(rw->talking_horse_layer, "Hey there, night owl!");
   }
 }
 
@@ -213,7 +163,7 @@ static void prv_click_config_provider(void *context) {
 
 static void prv_up_clicked(ClickRecognizerRef recognizer, void *context) {
   RootWindow* rw = context;
-  // talking_horse_layer_set_text(rw->talking_horse_layer, "I'm doing thanks! How help?");
+  // talking_lobster_layer_set_text(rw->talking_lobster_layer, "I'm doing thanks! How help?");
   char **suggestions;
   int count = prv_load_suggestions(&suggestions);
   ActionMenuLevel *level = baction_menu_level_create(count);
