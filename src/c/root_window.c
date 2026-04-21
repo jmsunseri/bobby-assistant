@@ -20,7 +20,9 @@
 #include "root_window.h"
 #include "talking_lobster_layer.h"
 #include "converse/session_window.h"
-#include "menus/root_menu.h"
+#include "menus/alarm_menu.h"
+#include "menus/about_window.h"
+#include "menus/reminders_menu.h"
 #include "util/logging.h"
 #include "util/style.h"
 #include "util/memory/malloc.h"
@@ -64,6 +66,10 @@ static void prv_up_clicked(ClickRecognizerRef recognizer, void *context);
 static int prv_load_suggestions(char*** suggestions);
 static void prv_action_menu_closed(ActionMenu *action_menu, const ActionMenuItem *performed_action, void *context);
 static void prv_suggestion_clicked(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
+static void prv_menu_alarms(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
+static void prv_menu_timers(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
+static void prv_menu_reminders(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
+static void prv_menu_about(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
 static void prv_app_message_handler(DictionaryIterator *iter, void *context);
 
 RootWindow* root_window_create() {
@@ -193,7 +199,6 @@ static void prv_action_menu_closed(ActionMenu *action_menu, const ActionMenuItem
 }
 
 static void prv_suggestion_clicked(ActionMenu *action_menu, const ActionMenuItem *action, void *context) {
-  RootWindow* rw = context;
   char* suggestion = action_menu_item_get_label(action);
   session_window_push(0, suggestion);
 }
@@ -203,7 +208,37 @@ static void prv_prompt_clicked(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void prv_more_clicked(ClickRecognizerRef recognizer, void* context) {
-  root_menu_window_push();
+  ActionMenuLevel *level = baction_menu_level_create(4);
+  action_menu_level_add_action(level, "Alarms", prv_menu_alarms, NULL);
+  action_menu_level_add_action(level, "Timers", prv_menu_timers, NULL);
+  action_menu_level_add_action(level, "Reminders", prv_menu_reminders, NULL);
+  action_menu_level_add_action(level, "About", prv_menu_about, NULL);
+  ActionMenuConfig config = (ActionMenuConfig) {
+    .root_level = level,
+    .colors = {
+      .background = BRANDED_BACKGROUND_COLOUR,
+      .foreground = gcolor_legible_over(BRANDED_BACKGROUND_COLOUR),
+    },
+    .align = ActionMenuAlignTop,
+    .context = NULL,
+  };
+  action_menu_open(&config);
+}
+
+static void prv_menu_alarms(ActionMenu *action_menu, const ActionMenuItem *action, void *context) {
+  alarm_menu_window_push(false);
+}
+
+static void prv_menu_timers(ActionMenu *action_menu, const ActionMenuItem *action, void *context) {
+  alarm_menu_window_push(true);
+}
+
+static void prv_menu_reminders(ActionMenu *action_menu, const ActionMenuItem *action, void *context) {
+  reminders_menu_push();
+}
+
+static void prv_menu_about(ActionMenu *action_menu, const ActionMenuItem *action, void *context) {
+  about_window_push();
 }
 
 static int prv_load_suggestions(char*** suggestions) {

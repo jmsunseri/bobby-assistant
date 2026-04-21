@@ -71,11 +71,6 @@ static void prv_update_layer(Layer *layer, GContext *ctx) {
   const int available_space = bounds.size.w - 18 - data->text_size.w - 10;
   const int bubble_width = size.w - 16 - available_space;
   const int corner_offset = 6;
-#ifdef PBL_ROUND
-  const int bubble_x = (size.w - bubble_width) / 2 - ACTION_BAR_WIDTH / 2;
-#else
-  const int bubble_x = 8 + available_space;
-#endif
 
   // Lobster position
 #ifdef PBL_PLATFORM_EMERY
@@ -98,6 +93,12 @@ static void prv_update_layer(Layer *layer, GContext *ctx) {
   const int lobster_width = 114;
   const int lobster_x = 0;
   const int lobster_y = size.h - lobster_height;
+#endif
+
+#ifdef PBL_ROUND
+  const int bubble_x = size.w - bubble_width - 45;
+#else
+  const int bubble_x = 8 + available_space;
 #endif
 
   // Position bubble just above the lobster on all platforms

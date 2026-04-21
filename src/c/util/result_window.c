@@ -29,6 +29,7 @@ typedef struct {
   VectorLayer* image_layer;
 #ifdef PBL_COLOR
   GColor background_color;
+  GColor text_color;
 #endif
   char* title_text;
   char* text_text;
@@ -45,9 +46,11 @@ void result_window_push(const char* title, const char* text, GDrawCommandImage *
   Window* window = bwindow_create();
   ResultWindowData* data = bmalloc(sizeof(ResultWindowData));
   // Only bother setting the background colour if we're on a colour device.
+  GColor text_color = gcolor_legible_over(background_color);
 #ifdef PBL_COLOR
   window_set_background_color(window, background_color);
   data->background_color = background_color;
+  data->text_color = text_color;
 #endif
   data->image = image;
   data->title_text = bmalloc(strlen(title) + 1);
@@ -71,12 +74,17 @@ static void prv_window_load(Window* window) {
   data->status_bar = bstatus_bar_layer_create();
   clawd_status_bar_result_pane_config(data->status_bar);
 #ifdef PBL_COLOR
-  status_bar_layer_set_colors(data->status_bar, data->background_color, GColorBlack);
+  status_bar_layer_set_colors(data->status_bar, data->background_color, gcolor_legible_over(data->background_color));
 #endif
   layer_add_child(root_layer, status_bar_layer_get_layer(data->status_bar));
 
   data->title_layer = btext_layer_create(GRect(5, 15, bounds.size.w - 10, 40));
   text_layer_set_background_color(data->title_layer, GColorClear);
+#ifdef PBL_COLOR
+  text_layer_set_text_color(data->title_layer, data->text_color);
+#else
+  text_layer_set_text_color(data->title_layer, GColorBlack);
+#endif
   text_layer_set_font(data->title_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text(data->title_layer, data->title_text);
   text_layer_set_text_alignment(data->title_layer, GTextAlignmentCenter);
@@ -87,6 +95,11 @@ static void prv_window_load(Window* window) {
   int16_t text_height = bounds.size.h - STATUS_BAR_LAYER_HEIGHT - 60;
   data->text_layer = btext_layer_create(GRect(5, 55, bounds.size.w - 10, text_height));
   text_layer_set_background_color(data->text_layer, GColorClear);
+#ifdef PBL_COLOR
+  text_layer_set_text_color(data->text_layer, data->text_color);
+#else
+  text_layer_set_text_color(data->text_layer, GColorBlack);
+#endif
   text_layer_set_text_alignment(data->text_layer, GTextAlignmentCenter);
   text_layer_set_font(data->text_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
   text_layer_set_text(data->text_layer, data->text_text);
