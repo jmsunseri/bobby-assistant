@@ -76,6 +76,7 @@ static void prv_window_load(Window* window) {
 
   data->text_layer = formatted_text_layer_create(GRect(5, 0, window_bounds.size.w - 10, 10000));
   formatted_text_layer_set_text_alignment(data->text_layer, GTextAlignmentCenter);
+  formatted_text_layer_set_text_color(data->text_layer, gcolor_legible_over(BRANDED_BACKGROUND_COLOUR));
   formatted_text_layer_set_text(data->text_layer, data->about_text);
   GSize text_size = formatted_text_layer_get_content_size(data->text_layer);
 

@@ -44,6 +44,7 @@ typedef struct {
   size_t fragment_count;
   size_t largest_fragment_length;
   GTextAlignment alignment;
+  GColor text_color;
   int16_t total_height;
 } FormattedTextLayerData;
 
@@ -61,6 +62,7 @@ FormattedTextLayer* formatted_text_layer_create(GRect frame) {
   data->subtitle_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
   data->body_font = fonts_get_system_font(FONT_KEY_GOTHIC_24);
   data->alignment = GTextAlignmentLeft;
+  data->text_color = GColorBlack;
   layer_set_update_proc(layer, prv_layer_update);
   return layer;
 }
@@ -105,6 +107,12 @@ void formatted_text_layer_set_text_alignment(FormattedTextLayer* layer, GTextAli
   prv_recalculate(layer);
 }
 
+void formatted_text_layer_set_text_color(FormattedTextLayer* layer, GColor color) {
+  FormattedTextLayerData *data = layer_get_data(layer);
+  data->text_color = color;
+  layer_mark_dirty(layer);
+}
+
 static void prv_layer_update(Layer *layer, GContext *ctx) {
   FormattedTextLayerData *data = layer_get_data(layer);
   GRect bounds = layer_get_bounds(layer);
@@ -113,7 +121,7 @@ static void prv_layer_update(Layer *layer, GContext *ctx) {
     data->subtitle_font,
     data->body_font,
   };
-  graphics_context_set_text_color(ctx, GColorBlack);
+  graphics_context_set_text_color(ctx, data->text_color);
   char *buffer = bmalloc(data->largest_fragment_length + 1);
   for (size_t i = 0; i < data->fragment_count; ++i) {
     TextFragment *fragment = &data->fragments[i];
