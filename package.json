@@ -446,26 +446,6 @@
           "type": "raw"
         },
         {
-          "file": "images_fence_pony_color.png",
-          "name": "FENCE_LOBSTER_BITMAP",
-          "type": "bitmap",
-          "memoryFormat": "2BitPalette",
-          "targetPlatforms": [
-            "basalt",
-            "chalk",
-            "emery"
-          ]
-        },
-        {
-          "file": "images_fence_pony_bw.png",
-          "name": "FENCE_LOBSTER_BITMAP",
-          "type": "bitmap",
-          "memoryFormat": "1BitPalette",
-          "targetPlatforms": [
-            "diorite"
-          ]
-        },
-        {
           "file": "images_skull.pdc",
           "name": "IMAGE_SKULL",
           "type": "raw"
