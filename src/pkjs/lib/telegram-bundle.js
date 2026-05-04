@@ -2618,13 +2618,13 @@ imurmurhash/imurmurhash.js:
 
 // Expose TelegramClient and StringSession as globals for Clawd
 if (typeof Telegram !== 'undefined') {
-    if (typeof TelegramClient === 'undefined' && Telegram.TelegramClient) {
-        var TelegramClient = Telegram.TelegramClient;
+    if (Telegram.TelegramClient) {
+        (typeof window !== 'undefined' ? window : global).TelegramClient = Telegram.TelegramClient;
     }
-    if (typeof StringSession === 'undefined' && Telegram.StringSession) {
-        var StringSession = Telegram.StringSession;
+    if (Telegram.StringSession) {
+        (typeof window !== 'undefined' ? window : global).StringSession = Telegram.StringSession;
     }
-    if (typeof NewMessage === 'undefined' && Telegram.NewMessage) {
-        var NewMessage = Telegram.NewMessage;
+    if (Telegram.NewMessage) {
+        (typeof window !== 'undefined' ? window : global).NewMessage = Telegram.NewMessage;
     }
 }
