@@ -128,7 +128,10 @@ static void prv_window_unload(Window* window) {
     gdraw_command_image_destroy(data->image);
   }
   status_bar_layer_destroy(data->status_bar);
-  app_timer_cancel(data->timer);
+  if (data->timer) {
+    app_timer_cancel(data->timer);
+    data->timer = NULL;
+  }
   free(data->title_text);
   free(data->text_text);
   free(data);
@@ -145,5 +148,7 @@ static void prv_window_appear(Window* window) {
 
 static void prv_timer_expired(void* context) {
   Window *window = context;
+  ResultWindowData *data = window_get_user_data(window);
+  data->timer = NULL;
   window_stack_remove(window, true);
 }

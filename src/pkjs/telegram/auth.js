@@ -35,12 +35,14 @@ var authState = {
  * @returns {Promise<object>} Result with success status and next step
  */
 function sendCode(phoneNumber) {
+    console.log('[auth] sendCode called for phone: ' + phoneNumber);
     return new Promise(function(resolve, reject) {
         authState.phoneNumber = phoneNumber;
 
         if (client.getClient()) {
-            // Use GramJS to send code
+            console.log('[auth] GramJS client available, sending code...');
             client.getClient().sendCode(phoneNumber).then(function(result) {
+                console.log('[auth] Code sent successfully, phoneCodeHash: ' + (result.phoneCodeHash ? 'received' : 'missing'));
                 authState.phoneCodeHash = result.phoneCodeHash;
                 authState.isWaitingForCode = true;
                 resolve({
@@ -49,11 +51,11 @@ function sendCode(phoneNumber) {
                     message: 'Verification code sent to ' + phoneNumber
                 });
             }).catch(function(err) {
+                console.error('[auth] Failed to send code: ' + err.message);
                 reject(new Error('Failed to send code: ' + err.message));
             });
         } else {
-            // Fallback for when GramJS isn't loaded
-            // In a real implementation, this would use a bundled MTProto library
+            console.error('[auth] Cannot send code: GramJS client not initialized');
             reject(new Error('Telegram client not initialized. Please ensure GramJS is loaded.'));
         }
     });
@@ -65,19 +67,22 @@ function sendCode(phoneNumber) {
  * @returns {Promise<object>} Result with success status
  */
 function signIn(code) {
+    console.log('[auth] signIn called with code (length: ' + (code ? code.length : 0) + '), waitingForCode: ' + authState.isWaitingForCode);
     return new Promise(function(resolve, reject) {
         if (!authState.isWaitingForCode) {
+            console.error('[auth] signIn rejected: no pending authentication (call sendCode first)');
             reject(new Error('No pending authentication. Call sendCode first.'));
             return;
         }
 
         if (client.getClient()) {
+            console.log('[auth] GramJS client available, attempting sign in...');
             client.getClient().signIn({
                 code: code,
                 phoneNumber: authState.phoneNumber,
                 phoneCodeHash: authState.phoneCodeHash
             }).then(function(user) {
-                // Save the session
+                console.log('[auth] Sign in successful, user: ' + (user.firstName || 'unknown') + ' (id: ' + user.id + ')');
                 var sessionStr = client.getClient().session.save();
                 session.saveSession(sessionStr);
 
@@ -95,18 +100,20 @@ function signIn(code) {
                     }
                 });
             }).catch(function(err) {
-                // Handle 2FA case
                 if (err.message && err.message.includes('SESSION_PASSWORD_NEEDED')) {
+                    console.log('[auth] 2FA required for user');
                     resolve({
                         success: false,
                         status: '2fa_required',
                         message: 'Two-factor authentication is enabled. Please provide your password.'
                     });
                 } else {
+                    console.error('[auth] Failed to sign in: ' + err.message);
                     reject(new Error('Failed to sign in: ' + err.message));
                 }
             });
         } else {
+            console.error('[auth] Cannot sign in: GramJS client not initialized');
             reject(new Error('Telegram client not initialized.'));
         }
     });
@@ -118,13 +125,16 @@ function signIn(code) {
  * @returns {Promise<object>} Result with success status
  */
 function signInWithPassword(password) {
+    console.log('[auth] signInWithPassword called');
     return new Promise(function(resolve, reject) {
         if (!client.getClient()) {
+            console.error('[auth] Cannot sign in with password: client not initialized');
             reject(new Error('Telegram client not initialized.'));
             return;
         }
 
         client.getClient().signInPassword(password).then(function(user) {
+            console.log('[auth] 2FA sign in successful, user: ' + (user.firstName || 'unknown') + ' (id: ' + user.id + ')');
             var sessionStr = client.getClient().session.save();
             session.saveSession(sessionStr);
 
@@ -139,6 +149,7 @@ function signInWithPassword(password) {
                 }
             });
         }).catch(function(err) {
+            console.error('[auth] 2FA sign in failed: ' + err.message);
             reject(new Error('Failed to sign in: ' + err.message));
         });
     });
@@ -149,15 +160,19 @@ function signInWithPassword(password) {
  * @returns {Promise<object>} Connection status
  */
 function checkConnection() {
+    console.log('[auth] checkConnection called');
     return new Promise(function(resolve) {
         var storedSession = session.loadSession();
         if (storedSession) {
+            console.log('[auth] Stored session found, attempting to connect...');
             client.initClient().then(function() {
+                console.log('[auth] Connected successfully with stored session');
                 resolve({
                     connected: true,
                     hasSession: true
                 });
-            }).catch(function() {
+            }).catch(function(err) {
+                console.error('[auth] Failed to connect with stored session: ' + (err.message || err));
                 resolve({
                     connected: false,
                     hasSession: true,
@@ -165,6 +180,7 @@ function checkConnection() {
                 });
             });
         } else {
+            console.log('[auth] No stored session found');
             resolve({
                 connected: false,
                 hasSession: false
@@ -178,16 +194,20 @@ function checkConnection() {
  * @returns {Promise<void>}
  */
 function logout() {
+    console.log('[auth] logout called');
     return new Promise(function(resolve, reject) {
         client.disconnect().then(function() {
-            session.clearSession();
+            console.log('[auth] Disconnected and session cleared');
             authState = {
                 phoneNumber: null,
                 phoneCodeHash: null,
                 isWaitingForCode: false
             };
             resolve();
-        }).catch(reject);
+        }).catch(function(err) {
+            console.error('[auth] Logout failed: ' + (err.message || err));
+            reject(err);
+        });
     });
 }
 

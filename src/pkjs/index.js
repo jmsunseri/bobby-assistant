@@ -60,37 +60,49 @@ function handleAppMessage(e) {
 
     if ('TELEGRAM_PENDING_ACTION' in data) {
         var action = {};
-        try { action = JSON.parse(data.TELEGRAM_PENDING_ACTION); } catch (e) {}
+        try { action = JSON.parse(data.TELEGRAM_PENDING_ACTION); } catch (e) { console.error('[index] Failed to parse TELEGRAM_PENDING_ACTION: ' + data.TELEGRAM_PENDING_ACTION); }
+        console.log('[index] Telegram pending action: ' + JSON.stringify(action));
         if (action.action === 'send_code' && action.phoneNumber) {
-            console.log('Sending verification code to: ' + action.phoneNumber);
+            console.log('[index] Sending verification code to: ' + action.phoneNumber);
             telegram.sendCode(action.phoneNumber).then(function(result) {
-                console.log('Code sent: ' + JSON.stringify(result));
+                console.log('[index] Code sent successfully: ' + JSON.stringify(result));
                 config.setSetting('clay_telegram_auth_state', JSON.stringify({
                     waitingForCode: true,
                     phoneNumber: action.phoneNumber
                 }));
                 sendTelegramStatus();
             }).catch(function(err) {
-                console.error('Failed to send code: ' + err.message);
+                console.error('[index] Failed to send code: ' + err.message);
             });
         } else if (action.action === 'sign_in' && action.code) {
-            console.log('Signing in with code');
+            console.log('[index] Signing in with code');
             telegram.signIn(action.code).then(function(result) {
-                console.log('Sign in result: ' + JSON.stringify(result));
-                config.setSetting('clay_telegram_auth_state', '');
+                console.log('[index] Sign in result: ' + JSON.stringify(result));
+                if (result.status === '2fa_required') {
+                    console.log('[index] 2FA required - user needs to provide password');
+                    config.setSetting('clay_telegram_auth_state', JSON.stringify({
+                        waitingForCode: false,
+                        needs2FA: true,
+                        phoneNumber: telegram.getAuthState().phoneNumber
+                    }));
+                } else {
+                    config.setSetting('clay_telegram_auth_state', '');
+                }
                 sendTelegramStatus();
             }).catch(function(err) {
-                console.error('Failed to sign in: ' + err.message);
+                console.error('[index] Failed to sign in: ' + err.message);
             });
         } else if (action.action === 'disconnect') {
-            console.log('Disconnecting from Telegram');
+            console.log('[index] Disconnecting from Telegram');
             telegram.logout().then(function() {
-                console.log('Disconnected');
+                console.log('[index] Disconnected successfully');
                 config.setSetting('clay_telegram_auth_state', '');
                 sendTelegramStatus();
             }).catch(function(err) {
-                console.error('Failed to disconnect: ' + err.message);
+                console.error('[index] Failed to disconnect: ' + err.message);
             });
+        } else {
+            console.log('[index] Unknown or incomplete telegram action: ' + JSON.stringify(action));
         }
         return;
     }

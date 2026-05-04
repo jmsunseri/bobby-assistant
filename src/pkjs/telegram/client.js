@@ -33,11 +33,14 @@ var currentUser = null;
  * @returns {Promise<boolean>} True if successfully initialized
  */
 function initClient() {
+    console.log('[client] initClient called');
     return new Promise(function(resolve, reject) {
         try {
             var storedSession = session.loadSession();
+            console.log('[client] Stored session: ' + (storedSession ? 'present (length: ' + storedSession.length + ')' : 'none'));
 
             if (typeof TelegramClient !== 'undefined') {
+                console.log('[client] GramJS available, creating TelegramClient...');
                 var stringSession = new StringSession(storedSession || '');
                 client = new TelegramClient(stringSession, process.env.TELEGRAM_APP_ID || 0, process.env.TELEGRAM_APP_HASH || '', {
                     connectionRetries: 5,
@@ -45,26 +48,25 @@ function initClient() {
 
                 client.connect().then(function() {
                     isConnected = true;
-                    console.log('Telegram client connected');
+                    console.log('[client] Telegram client connected successfully');
                     resolve(true);
                 }).catch(function(err) {
-                    console.error('Failed to connect to Telegram:', err);
+                    console.error('[client] Failed to connect to Telegram: ' + (err.message || err));
                     reject(err);
                 });
             } else {
-                // Fallback: Check if we have a stored session
-                // This allows the app to work even without GramJS loaded
-                // The actual Telegram communication would need to use a bundled library
-                console.log('GramJS not loaded - using stored session');
+                console.log('[client] GramJS not loaded, checking for stored session...');
                 if (storedSession) {
+                    console.log('[client] Using stored session (GramJS unavailable)');
                     isConnected = true;
                     resolve(true);
                 } else {
+                    console.error('[client] No session available and GramJS not loaded');
                     reject(new Error('No Telegram session available'));
                 }
             }
         } catch (err) {
-            console.error('Error initializing Telegram client:', err);
+            console.error('[client] Error initializing Telegram client: ' + (err.message || err));
             reject(err);
         }
     });
@@ -91,16 +93,22 @@ function getCurrentUser() {
  * @returns {Promise<void>}
  */
 function disconnect() {
+    console.log('[client] disconnect called, client: ' + (client ? 'present' : 'null'));
     return new Promise(function(resolve, reject) {
         if (client) {
             client.disconnect().then(function() {
+                console.log('[client] Disconnected successfully');
                 isConnected = false;
                 client = null;
                 currentUser = null;
                 session.clearSession();
                 resolve();
-            }).catch(reject);
+            }).catch(function(err) {
+                console.error('[client] Disconnect failed: ' + (err.message || err));
+                reject(err);
+            });
         } else {
+            console.log('[client] No client to disconnect, clearing session');
             isConnected = false;
             session.clearSession();
             resolve();
@@ -113,6 +121,9 @@ function disconnect() {
  * @returns {object|null}
  */
 function getClient() {
+    if (!client) {
+        console.log('[client] getClient called but client is null');
+    }
     return client;
 }
 

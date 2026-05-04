@@ -73,6 +73,7 @@ module.exports = function(minified) {
     }
 
     function setPendingAction(action) {
+        console.log('[config] setPendingAction: ' + JSON.stringify(action));
         if (pendingActionInput) {
             pendingActionInput.set(JSON.stringify(action));
         }
@@ -81,6 +82,10 @@ module.exports = function(minified) {
     function updateUI() {
         var session = loadSession();
         var authState = getAuthState();
+
+        console.log('[config] updateUI: session=' + (session ? 'present' : 'none') +
+            ', waitingForCode=' + !!authState.waitingForCode +
+            ', needs2FA=' + !!authState.needs2FA);
 
         if (pendingActionInput) { pendingActionInput.hide(); }
 
@@ -93,6 +98,7 @@ module.exports = function(minified) {
             if (botInput) botInput.show();
         } else if (authState.waitingForCode) {
             setStatus('A verification code was sent to ' + (authState.phoneNumber || 'your phone') + '. Enter the code below and press Save.');
+            console.log('[config] UI state: waiting for code, phone: ' + (authState.phoneNumber || 'unknown'));
             if (phoneInput) phoneInput.hide();
             if (codeInput) codeInput.show();
             if (resendCodeBtn) resendCodeBtn.show();
@@ -100,7 +106,15 @@ module.exports = function(minified) {
             if (botInput) botInput.show();
         } else {
             setStatus('Not connected. Enter your phone number and save to send a verification code.');
-            if (phoneInput) phoneInput.show();
+            console.log('[config] UI state: not connected');
+            if (phoneInput) {
+                phoneInput.show();
+                var phone = phoneInput.get();
+                if (phone) {
+                    console.log('[config] Auto-setting send_code action with existing phone number');
+                    setPendingAction({ action: 'send_code', phoneNumber: normalizePhone(phone) });
+                }
+            }
             if (codeInput) codeInput.hide();
             if (resendCodeBtn) resendCodeBtn.hide();
             if (disconnectBtn) disconnectBtn.hide();
@@ -129,6 +143,7 @@ module.exports = function(minified) {
             resendCodeBtn.on('click', function() {
                 var authState = getAuthState();
                 var phoneNumber = authState.phoneNumber || (phoneInput ? phoneInput.get() : '');
+                console.log('[config] Resend code clicked, phone: ' + (phoneNumber ? '****' + phoneNumber.slice(-4) : '(empty)'));
                 if (!phoneNumber) {
                     setStatus('Please enter a phone number', true);
                     return;
@@ -141,6 +156,7 @@ module.exports = function(minified) {
 
         if (disconnectBtn) {
             disconnectBtn.on('click', function() {
+                console.log('[config] Disconnect button clicked');
                 clearSession();
                 clearAuthState();
                 setPendingAction({ action: 'disconnect' });
@@ -158,6 +174,7 @@ module.exports = function(minified) {
         if (phoneInput) {
             phoneInput.on('change', function() {
                 var phone = phoneInput.get();
+                console.log('[config] Phone number changed: ' + (phone ? '****' + phone.slice(-4) : '(cleared)'));
                 if (phone) {
                     setPendingAction({ action: 'send_code', phoneNumber: normalizePhone(phone) });
                 }
@@ -167,6 +184,7 @@ module.exports = function(minified) {
         if (codeInput) {
             codeInput.on('change', function() {
                 var code = codeInput.get();
+                console.log('[config] Verification code changed (length: ' + (code ? code.length : 0) + ')');
                 if (code) {
                     setPendingAction({ action: 'sign_in', code: code });
                 }
