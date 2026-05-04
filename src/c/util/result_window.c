@@ -45,6 +45,7 @@ static void prv_timer_expired(void* context);
 void result_window_push(const char* title, const char* text, GDrawCommandImage *image, GColor background_color) {
   Window* window = bwindow_create();
   ResultWindowData* data = bmalloc(sizeof(ResultWindowData));
+  memset(data, 0, sizeof(ResultWindowData));
   // Only bother setting the background colour if we're on a colour device.
   GColor text_color = gcolor_legible_over(background_color);
 #ifdef PBL_COLOR
