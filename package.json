@@ -32,7 +32,6 @@
       "CHAT",
       "FUNCTION",
       "PROMPT",
-      "PROMPT_CONTEXT",
       "CLOSE_CODE",
       "CLOSE_REASON",
       "CLOSE_WAS_CLEAN",
@@ -114,7 +113,6 @@
       "TELEGRAM_PHONE",
       "TELEGRAM_CODE",
       "TELEGRAM_SEND_CODE",
-      "TELEGRAM_SIGN_IN",
       "TELEGRAM_DISCONNECT",
       "TELEGRAM_PENDING_ACTION",
       "OPENCLAW_BOT"
