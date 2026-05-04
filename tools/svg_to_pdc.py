@@ -202,9 +202,23 @@ def svg_to_pdc(svg_path, pdc_path, scale=1.0, target_size=None):
         """Recursively process SVG elements."""
         nonlocal commands
 
-        stroke = elem.get('stroke', inherited_stroke)
-        fill = elem.get('fill', inherited_fill)
-        stroke_width = int(float(elem.get('stroke-width', inherited_stroke_width)))
+        # Skip elements with display:none
+        style = elem.get('style', '')
+        if 'display:none' in style or elem.get('display') == 'none':
+            return
+
+        # Parse CSS style declarations
+        style_map = {}
+        if style:
+            for declaration in style.split(';'):
+                declaration = declaration.strip()
+                if ':' in declaration:
+                    prop, val = declaration.split(':', 1)
+                    style_map[prop.strip()] = val.strip()
+
+        stroke = elem.get('stroke', style_map.get('stroke', inherited_stroke))
+        fill = elem.get('fill', style_map.get('fill', inherited_fill))
+        stroke_width = int(float(elem.get('stroke-width', style_map.get('stroke-width', inherited_stroke_width))))
 
         tag = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
 
