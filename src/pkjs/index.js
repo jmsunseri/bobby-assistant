@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-require('./lib/telegram-bundle-mock.js');
+require('./lib/telegram-bundle.js');
 
 var location = require('./location');
 var session = require('./session');
