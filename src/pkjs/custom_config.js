@@ -24,6 +24,12 @@ module.exports = function(minified) {
     var BOT_USERNAME_KEY = 'openclaw_bot_username';
     var AUTH_STATE_KEY = 'clay_telegram_auth_state';
 
+    var pendingAction = null;
+
+    var telegram = require('./telegram');
+    var bundleLoader = require('./lib/bundle_loader');
+    var indexModule = require('./index');
+
     function setStatus(text, isError) {
         if (telegramStatusText) {
             telegramStatusText.set(text);
@@ -74,6 +80,7 @@ module.exports = function(minified) {
 
     function setPendingAction(action) {
         console.log('[config] setPendingAction: ' + JSON.stringify(action));
+        pendingAction = action;
         if (pendingActionInput) {
             pendingActionInput.set(JSON.stringify(action));
         }
@@ -138,6 +145,61 @@ module.exports = function(minified) {
         pendingActionInput = clayConfig.getItemByMessageKey('TELEGRAM_PENDING_ACTION');
 
         updateUI();
+
+        clayConfig.on(clayConfig.EVENTS.AFTER_DESTROY, function() {
+            if (!pendingAction) {
+                console.log('[config] No pending action to execute on save');
+                return;
+            }
+
+            var action = pendingAction;
+            pendingAction = null;
+
+            console.log('[config] Executing pending action on save: ' + JSON.stringify(action));
+
+            bundleLoader.ensureTelegramBundle();
+
+            if (action.action === 'send_code' && action.phoneNumber) {
+                console.log('[config] Sending verification code to: ' + action.phoneNumber);
+                telegram.sendCode(action.phoneNumber).then(function(result) {
+                    console.log('[config] Code sent successfully');
+                    setAuthState({
+                        waitingForCode: true,
+                        phoneNumber: action.phoneNumber
+                    });
+                    if (indexModule.updateTelegramStatus) { indexModule.updateTelegramStatus(); }
+                }).catch(function(err) {
+                    console.error('[config] Failed to send code: ' + err.message);
+                });
+            } else if (action.action === 'sign_in' && action.code) {
+                console.log('[config] Signing in with code');
+                telegram.signIn(action.code).then(function(result) {
+                    console.log('[config] Sign in result: ' + JSON.stringify(result));
+                    if (result.status === '2fa_required') {
+                        console.log('[config] 2FA required');
+                        setAuthState({
+                            waitingForCode: false,
+                            needs2FA: true,
+                            phoneNumber: telegram.getAuthState().phoneNumber
+                        });
+                    } else {
+                        clearAuthState();
+                    }
+                    if (indexModule.updateTelegramStatus) { indexModule.updateTelegramStatus(); }
+                }).catch(function(err) {
+                    console.error('[config] Failed to sign in: ' + err.message);
+                });
+            } else if (action.action === 'disconnect') {
+                console.log('[config] Disconnecting from Telegram');
+                telegram.logout().then(function() {
+                    console.log('[config] Disconnected successfully');
+                    clearAuthState();
+                    if (indexModule.updateTelegramStatus) { indexModule.updateTelegramStatus(); }
+                }).catch(function(err) {
+                    console.error('[config] Failed to disconnect: ' + err.message);
+                });
+            }
+        });
 
         if (resendCodeBtn) {
             resendCodeBtn.on('click', function() {
