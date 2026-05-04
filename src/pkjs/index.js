@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-require('./lib/telegram-bundle.js');
+var bundleLoader = require('./lib/bundle_loader');
+var ensureTelegramBundle = bundleLoader.ensureTelegramBundle;
 
 var location = require('./location');
 var session = require('./session');
@@ -59,6 +60,7 @@ function handleAppMessage(e) {
     }
 
     if ('TELEGRAM_PENDING_ACTION' in data) {
+        ensureTelegramBundle();
         var action = {};
         try { action = JSON.parse(data.TELEGRAM_PENDING_ACTION); } catch (e) { console.error('[index] Failed to parse TELEGRAM_PENDING_ACTION: ' + data.TELEGRAM_PENDING_ACTION); }
         console.log('[index] Telegram pending action: ' + JSON.stringify(action));

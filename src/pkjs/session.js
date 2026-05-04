@@ -16,6 +16,7 @@
 
 var LOGGING_ENABLED = false;
 
+var bundleLoader = require('./lib/bundle_loader');
 var location = require('./location');
 var config = require('./config');
 var actions = require('./actions');
@@ -154,11 +155,11 @@ Session.prototype.sendToOpenClaw = function(message) {
     var botUsername = telegram.getBotUsername();
 
     return new Promise(function(resolve, reject) {
-        // Check if GramJS is available
+        bundleLoader.ensureTelegramBundle();
+
         if (typeof TelegramClient !== 'undefined' && typeof StringSession !== 'undefined') {
             self.sendViaGramJS(message, botUsername, resolve, reject);
         } else {
-            // Fallback: Use a simpler HTTP-based approach or show error
             reject(new Error('Telegram client not available. Please reconnect.'));
         }
     });
