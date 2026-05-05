@@ -107,10 +107,20 @@ if (typeof Telegram !== 'undefined') {
     let code = fs.readFileSync(bundlePath, 'utf8');
 
     // Patch the main crypto polyfill (CryptoFile)
-    // Note: must use parentheses around ternary to avoid || binding before ? precedence issue
+    // On Node: use globalThis.__nodeCrypto (Node's crypto module)
+    // On browser/Pebble: the browser 'crypto' object only has getRandomValues/subtle,
+    // but GramJS needs randomBytes, sha1, sha256, createHash, pbkdf2Sync.
+    // We create a proxy object that delegates to require_crypto2 when available,
+    // since require_crypto2 is defined later in the bundle.
     code = code.replace(
         /crypto_default=\{\}/g,
-        `crypto_default=(globalThis.__nodeCrypto)?globalThis.__nodeCrypto:(typeof crypto!=="undefined"?crypto:{})`
+        `crypto_default=(globalThis.__nodeCrypto)?globalThis.__nodeCrypto:(function(){var _c2=null;function getC2(){if(_c2)return _c2;if(typeof __crypto2Fallback!=="undefined")return _c2=__crypto2Fallback;return _c2;}return{get randomBytes(){return getC2()&&getC2().randomBytes;},get createHash(){return getC2()&&getC2().createHash;},get pbkdf2Sync(){return getC2()&&getC2().pbkdf2Sync;},get sha1(){return getC2()&&getC2().sha1;},get sha256(){return getC2()&&getC2().sha256;}};})()`
+    );
+    // After require_crypto2 is defined, save its exports as globalThis.__crypto2Fallback
+    // so the lazy proxy in crypto_default can find these functions
+    code = code.replace(
+        /function createHash\(algorithm\)\{return new Hash\(algorithm\);\}\}\}\);\/\/ node_modules\/telegram\/crypto\/CTR\.js/,
+        `function createHash(algorithm){return new Hash(algorithm);}globalThis.__crypto2Fallback={randomBytes:randomBytes,createHash:createHash,pbkdf2Sync:pbkdf2Sync,sha1:function(d){var h=createHash("sha1");return h.update(d),h.digest();},sha256:function(d){var h=createHash("sha256");return h.update(d),h.digest();}};}});// node_modules/telegram/crypto/CTR.js`
     );
 
     // Patch the browser crypto module's randomBytes to use Node crypto when available
