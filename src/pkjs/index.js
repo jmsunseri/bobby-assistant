@@ -55,6 +55,11 @@ function handleTelegramSendCode(action) {
         sendTelegramStatus();
     }).catch(function(err) {
         console.error('[index] Failed to send code: ' + err.message);
+        config.setSetting('clay_telegram_auth_state', JSON.stringify({
+            error: err.message,
+            phoneNumber: action.phoneNumber
+        }));
+        sendTelegramStatus();
     });
 }
 
@@ -174,3 +179,10 @@ Pebble.addEventListener("ready",
 exports.updateTelegramStatus = function() {
     sendTelegramStatus();
 };
+
+// Export message handler for testing
+exports.handleAppMessage = handleAppMessage;
+exports.handleTelegramAction = handleTelegramAction;
+exports.handleTelegramSendCode = handleTelegramSendCode;
+exports.handleTelegramSignIn = handleTelegramSignIn;
+exports.handleTelegramDisconnect = handleTelegramDisconnect;

@@ -2,7 +2,8 @@
 /**
  * Prune unused Telegram TL schema definitions from the bundle.
  *
- * The TL schema contains 500+ API types, but we only need a subset.
+ * The TL schema contains 500+ API types, but we only need a subset
+ * that GramJS actually references in the code.
  */
 
 const fs = require('fs');
@@ -10,70 +11,157 @@ const path = require('path');
 
 const bundlePath = process.argv[2] || path.join(__dirname, '../src/pkjs/lib/telegram-bundle.js');
 
-// Required TL definitions (by name pattern)
-// These cover: core types, auth, messaging, users/chats, updates
+// Required TL definitions extracted from all tl_1.Api.* references in the bundle
 const REQUIRED = new Set([
     // Core primitives
     'boolFalse', 'boolTrue', 'true', 'vector', 'error', 'null',
+
+    // Connection handshake
+    'initConnection', 'invokeWithLayer', 'invokeAfterMsg',
+    'reqPqMulti', 'req_DHParams', 'setClientDHParams',
+    'resPQ', 'server_DHParamsOk', 'server_DHParamsFail',
+    'serverDHInnerData', 'clientDHInnerData',
+    'pQInnerData', 'dhGenOk', 'dhGenRetry', 'dhGenFail',
+    'badMsgNotification', 'badServerSalt',
+    'msgDetailedInfo', 'msgNewDetailedInfo', 'msgResendReq',
+    'msgsAck', 'msgsAllInfo', 'msgsStateReq', 'msgsStateInfo',
+    'newSessionCreated', 'pong', 'pingDelayDisconnect',
+    'futureSalts', 'inputClientProxy',
 
     // Auth
     'auth.sentCode', 'auth.authorization', 'auth.sentCodeType', 'auth.codeType',
     'auth.loginToken', 'auth.loginTokenMigrateTo', 'auth.loginTokenSuccess',
     'auth.exportedSession', 'auth.exportSession',
+    'auth.sendCode', 'auth.signIn', 'auth.signUp', 'auth.logOut',
+    'auth.importAuthorization', 'auth.exportAuthorization',
+    'auth.checkPassword', 'auth.resendCode',
+    'auth.importLoginToken', 'auth.exportLoginToken', 'auth.importBotAuthorization',
+    'auth.authorizationSignUpRequired',
+    'auth.sentCodeSuccess', 'auth.sentCodeTypeApp', 'auth.sentCodeTypeSms',
+    'auth.sentCodeTypeCall', 'auth.sentCodeTypeFlashCall',
+    'auth.sentCodeTypeFragment', 'auth.sentCodeTypeEmailCode',
+    'codeSettings',
 
     // Account
     'account.password', 'account.passwordSettings', 'account.passwordInputSettings',
+    'account.getPassword', 'account.updatePasswordSettings', 'account.confirmPasswordEmail',
+    'passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow',
+    'passwordKdfAlgoUnknown', 'inputCheckPasswordEmpty', 'inputCheckPasswordSRP',
 
     // Users
-    'user', 'userFull', 'userProfilePhoto', 'userStatus', 'userEmpty',
+    'user', 'userFull', 'userEmpty', 'userProfilePhoto', 'userProfilePhotoEmpty', 'userStatus',
     'inputUser', 'inputUserSelf', 'inputUserEmpty', 'inputUserFromMessage',
-    'users.userFull', 'users.users',
+    'users.userFull', 'users.users', 'users.getUsers',
 
     // Chats/Channels
-    'chat', 'chatFull', 'chatEmpty', 'channel', 'channelFull', 'channelEmpty',
+    'chat', 'chatFull', 'chatEmpty', 'chatForbidden', 'chatPhoto', 'chatPhotoEmpty',
+    'chatBannedRights', 'chatInvite', 'chatInviteAlready', 'chatParticipantsForbidden',
+    'channel', 'channelFull', 'channelEmpty', 'channelForbidden',
+    'channelAdminLogEventActionEditMessage', 'channelAdminLogEventsFilter',
+    'channelParticipantsBanned', 'channelParticipantsContacts',
+    'channelParticipantsKicked', 'channelParticipantsSearch',
     'inputPeerChat', 'inputPeerChannel', 'inputPeerEmpty', 'inputPeerSelf',
     'inputPeerUser', 'inputPeerUserFromMessage', 'inputPeerChannelFromMessage',
+    'inputChannel', 'inputChatPhoto', 'inputChatPhotoEmpty', 'inputChatUploadedPhoto',
     'chats.chats', 'channels.channels',
+    'channels.getChannels', 'channels.getFullChannel', 'channels.getMessages',
+    'channels.getParticipants', 'channels.channelParticipantsNotModified',
+    'channels.deleteMessages', 'channels.editBanned', 'channels.getAdminLog',
+    'channels.leaveChannel', 'channels.readHistory',
+
+    // Peer types
+    'peerUser', 'peerChat', 'peerChannel', 'peerEmpty',
+    'dialog', 'dialogFolder', 'dialogPeer', 'inputDialogPeer', 'inputNotifyPeer',
+    'topPeer',
 
     // Messages
     'message', 'messageEmpty', 'messageService',
     'messageMediaEmpty', 'messageMediaPhoto', 'messageMediaDocument',
-    'messages.dialogs', 'messages.dialogsSlice',
+    'messageMediaContact', 'messageMediaDice', 'messageMediaGame',
+    'messageMediaGeo', 'messageMediaPoll', 'messageMediaUnsupported',
+    'messageMediaVenue', 'messageMediaWebPage',
+    'messageEntityBlockquote', 'messageEntityBold', 'messageEntityCode',
+    'messageEntityCustomEmoji', 'messageEntityEmail', 'messageEntityItalic',
+    'messageEntityMentionName', 'messageEntityPre', 'messageEntitySpoiler',
+    'messageEntityStrike', 'messageEntityTextUrl', 'messageEntityUnderline',
+    'messageEntityUrl',
+    'messages.dialogs', 'messages.dialogsSlice', 'messages.dialogsNotModified',
     'messages.messages', 'messages.messagesSlice', 'messages.channelMessages',
+    'messages.messagesNotModified', 'messages.chatFull',
     'messages.sentMessage', 'messages.affectedMessages',
     'inputMessagesEmpty', 'inputMessagesFilterEmpty',
+    'inputMessageID', 'inputReplyToMessage', 'inputSingleMedia',
+    'messages.sendMessage', 'messages.sendMedia', 'messages.sendMultiMedia',
+    'messages.getDialogs', 'messages.getHistory', 'messages.getMessages',
+    'messages.getReplies', 'messages.search', 'messages.searchGlobal',
+    'messages.readHistory', 'messages.readMentions', 'messages.getChats',
+    'messages.getFullChat', 'messages.forwardMessages', 'messages.deleteMessages',
+    'messages.editMessage', 'messages.setTyping', 'messages.updatePinnedMessage',
+    'messages.unpinAllMessages', 'messages.uploadMedia', 'messages.deleteChatUser',
+    'messages.checkChatInvite', 'messages.getDiscussionMessage',
+    'messages.getInlineBotResults',
 
     // Updates
     'updates.state', 'updates.difference', 'updates.differenceEmpty',
-    'updates.newMessage', 'updateNewMessage', 'updateReadHistory',
-    'updateEditMessage', 'updateMessageID',
+    'updates.newMessage', 'updateNewMessage', 'updateNewChannelMessage',
+    'updateReadHistory', 'updateEditMessage', 'updateMessageID',
+    'updateLoginToken', 'updateServiceNotification',
+    'updateShort', 'updateShortMessage',
+    'updateShortChatMessage', 'updateShortSentMessage',
+    'updates', 'updatesCombined',
+    'updates.getState', 'updates.getDifference',
 
     // Documents/Media
-    'document', 'photo', 'photoSize', 'inputDocument', 'inputPhoto',
-    'documentAttributeFilename', 'documentAttributeVideo',
+    'document', 'documentEmpty', 'documentAttributeFilename',
+    'documentAttributeVideo', 'documentAttributeAudio',
     'documentAttributeImageSize',
+    'inputDocument', 'inputDocumentEmpty', 'inputDocumentFileLocation',
+    'inputFile', 'inputFileBig', 'inputPhoto', 'inputPhotoEmpty',
+    'inputPhotoFileLocation', 'inputPeerPhotoFileLocation',
+    'inputGeoPoint', 'inputGeoPointEmpty', 'inputGameID',
+    'photo', 'photoEmpty', 'photoSize', 'photoSizeEmpty',
+    'photoCachedSize', 'photoPathSize', 'photoStrippedSize',
+    'photoSizeProgressive', 'videoSize',
+    'inputMediaEmpty', 'inputMediaPhoto', 'inputMediaDocument',
+    'inputMediaPhotoExternal', 'inputMediaDocumentExternal',
+    'inputMediaUploadedPhoto', 'inputMediaUploadedDocument',
+    'inputMediaContact', 'inputMediaDice', 'inputMediaGame',
+    'inputMediaGeoPoint', 'inputMediaPoll', 'inputMediaVenue',
+    'webDocument', 'webDocumentNoProxy', 'webPage', 'poll',
+    'geoPoint', 'geoPointEmpty',
 
-    // Common types
-    'peerUser', 'peerChat', 'peerChannel', 'peerEmpty',
+    // Keyboard/Reply
+    'replyInlineMarkup', 'replyKeyboardMarkup', 'keyboardButtonRow',
 
-    // Request methods (functions) - use dot notation
-    'auth.sendCode', 'auth.signIn', 'auth.signUp', 'auth.logOut',
-    'auth.importAuthorization', 'auth.exportAuthorization',
-    'messages.sendMessage', 'messages.getDialogs', 'messages.getHistory',
-    'messages.readHistory', 'messages.getMessages', 'messages.sendMedia',
-    'users.getUsers', 'users.getFullUser',
-    'chats.getChats', 'channels.getChannels',
-    'updates.getState', 'updates.getDifference',
-    'account.getPassword', 'account.updatePasswordSettings',
-    'help.getConfig',
+    // Upload
+    'upload.file', 'upload.fileCdnRedirect', 'upload.getFile',
+    'upload.saveFilePart', 'upload.saveBigFilePart',
+
+    // Contacts
+    'contacts.getContacts', 'contacts.contactsNotModified',
+    'contacts.resolveUsername', 'contacts.resolvedPeer',
+
+    // Help / Config
+    'config', 'help.getConfig', 'help.acceptTermsOfService',
+    'dcOption',
+
+    // Send message actions
+    'sendMessageCancelAction', 'sendMessageChooseContactAction',
+    'sendMessageGamePlayAction', 'sendMessageGeoLocationAction',
+    'sendMessageRecordAudioAction', 'sendMessageRecordRoundAction',
+    'sendMessageRecordVideoAction', 'sendMessageTypingAction',
+    'sendMessageUploadAudioAction', 'sendMessageUploadDocumentAction',
+    'sendMessageUploadPhotoAction', 'sendMessageUploadRoundAction',
+    'sendMessageUploadVideoAction',
+
+    // Photos
+    'photos.photo',
 ]);
 
 // Also add name without dot (e.g., 'user' for 'user#...')
 for (const name of [...REQUIRED]) {
     if (name.includes('.')) {
-        // Add the part after the dot as a constructor pattern
         const parts = name.split('.');
-        // auth.sendCode -> also match sendCode#
         REQUIRED.add(parts[1]);
     }
 }
@@ -82,24 +170,19 @@ function shouldKeep(line) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('//')) return true;
 
-    // Parse TL definition: name#id fields = Result;
     const match = trimmed.match(/^([a-zA-Z0-9_.]+)#([a-f0-9]+)/);
-    if (!match) return true; // Keep non-definition lines
+    if (!match) return true;
 
     const name = match[1];
 
-    // Check if this definition is needed
     if (REQUIRED.has(name)) return true;
 
-    // Check namespace (e.g., auth.sendCode)
     const parts = name.split('.');
     if (parts.length > 1) {
         if (REQUIRED.has(name)) return true;
-        // Check if just the method name is needed
         if (REQUIRED.has(parts[1])) return true;
     }
 
-    // Check if any required type matches
     for (const req of REQUIRED) {
         if (name.startsWith(req) || trimmed.includes('=' + req + ';')) return true;
     }
@@ -130,8 +213,6 @@ function main() {
     let code = fs.readFileSync(bundlePath, 'utf8');
     console.log('Original size:', (code.length / 1024).toFixed(1), 'KB');
 
-    // Find the TL schema module
-    // Pattern: module.exports="boolFalse#...
     const startPattern = 'module.exports="boolFalse#';
     const startIdx = code.indexOf(startPattern);
     if (startIdx === -1) {
@@ -141,53 +222,27 @@ function main() {
 
     console.log('Found TL schema at offset', startIdx);
 
-    // Find end: the schema ends with ";
-    // We need to find where the module.exports string ends
-    // Look for the pattern: ...= SmsJob;\n...;\n" followed by });
-
-    // Simple approach: find the closing "); after the module wrapper
-    // The apiTl module ends with: "}); // node_modules/telegram/tl/schemaTl.js or similar
-
-    // Let's search for the end of the module.exports string
-    // It ends with: fragment.getCollectibleInfo...= fragment.CollectibleInfo;\n"
-
-    // Count escaped newlines to find schema end
-    let depth = 0;
-    let endIdx = startIdx + startPattern.length;
-    let inString = true;
-
-    // Actually, simpler: find where module.exports ends by looking for
-    // the pattern: "; followed by });
-    // The schema is one big string, ending with \n" followed by });
-
-    // Find: fragment.CollectibleInfo;\n" followed by closing
     const endPattern = /fragment\.getCollectibleInfo[^\\]*\\n"/;
     const endMatch = code.slice(startIdx).match(endPattern);
     if (endMatch) {
-        endIdx = startIdx + endMatch.index + endMatch[0].length - 1; // -1 to exclude the closing "
+        endIdx = startIdx + endMatch.index + endMatch[0].length - 1;
         console.log('Found schema end at offset', endIdx - startIdx);
     } else {
         console.log('Could not find schema end, trying alternative...');
-        // Alternative: find the end of the module.exports assignment
         const altPattern = /module\.exports="[^"]*";/;
-        // This won't work because the string contains escaped quotes...
-        // Let's just skip pruning for now
         console.log('Skipping pruning - could not locate schema boundaries');
         process.exit(0);
     }
 
-    // Extract schema
     const schemaStart = startIdx + 'module.exports="'.length;
     const schemaEnd = endIdx;
     const schema = code.slice(schemaStart, schemaEnd);
 
     console.log('Schema size:', (schema.length / 1024).toFixed(1), 'KB');
 
-    // Prune
     const pruned = pruneSchema(schema);
     console.log('Pruned schema size:', (pruned.length / 1024).toFixed(1), 'KB');
 
-    // Replace in bundle
     const newCode = code.slice(0, schemaStart) + pruned + code.slice(schemaEnd);
     console.log('New bundle size:', (newCode.length / 1024).toFixed(1), 'KB');
     console.log('Reduction:', ((1 - newCode.length / code.length) * 100).toFixed(1), '%');

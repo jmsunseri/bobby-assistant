@@ -6,6 +6,9 @@
     "pebble-app"
   ],
   "private": true,
+  "scripts": {
+    "test": "vitest run"
+  },
   "dependencies": {
     "@rebble/clay": "1.0.8",
     "pebble-events": "^1.2.0"
@@ -455,5 +458,9 @@
         }
       ]
     }
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.2",
+    "vitest": "^4.1.5"
   }
 }

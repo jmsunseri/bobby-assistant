@@ -67,6 +67,13 @@ if (typeof globalThis === 'undefined') {
     else if (typeof window !== 'undefined') globalThis = window;
     else if (typeof self !== 'undefined') globalThis = self;
 }
+// Expose Node's crypto module for the esbuild polyfill fallback
+// Must be on global scope since the IIFE can't access module-scope vars
+if (typeof globalThis.__nodeCrypto === 'undefined') {
+    if (typeof require === 'function' && typeof module !== 'undefined') {
+        try { globalThis.__nodeCrypto = require('crypto'); } catch(e) {}
+    }
+}
 
 `;
 
@@ -77,14 +84,14 @@ if (typeof globalThis === 'undefined') {
     const footer = `
 // Expose TelegramClient and StringSession as globals for Clawd
 if (typeof Telegram !== 'undefined') {
-    if (typeof TelegramClient === 'undefined' && Telegram.TelegramClient) {
-        var TelegramClient = Telegram.TelegramClient;
+    if (Telegram.TelegramClient) {
+        (typeof window !== 'undefined' ? window : global).TelegramClient = Telegram.TelegramClient;
     }
-    if (typeof StringSession === 'undefined' && Telegram.StringSession) {
-        var StringSession = Telegram.StringSession;
+    if (Telegram.StringSession) {
+        (typeof window !== 'undefined' ? window : global).StringSession = Telegram.StringSession;
     }
-    if (typeof NewMessage === 'undefined' && Telegram.NewMessage) {
-        var NewMessage = Telegram.NewMessage;
+    if (Telegram.NewMessage) {
+        (typeof window !== 'undefined' ? window : global).NewMessage = Telegram.NewMessage;
     }
 }
 `;
@@ -92,6 +99,58 @@ if (typeof Telegram !== 'undefined') {
 
     // Clean up temp file
     fs.unlinkSync(tempPath);
+
+    // Fix empty crypto polyfill from esbuild
+    // esbuild's NodeModulesPolyfillPlugin replaces 'crypto' with an empty object
+    // Inside the IIFE, 'require' is the bundle's own loader, not Node's
+    // So we expose Node's crypto on the global and reference it from the polyfill
+    let code = fs.readFileSync(bundlePath, 'utf8');
+
+    // Patch the main crypto polyfill (CryptoFile)
+    // Note: must use parentheses around ternary to avoid || binding before ? precedence issue
+    code = code.replace(
+        /crypto_default=\{\}/g,
+        `crypto_default=(globalThis.__nodeCrypto)?globalThis.__nodeCrypto:(typeof crypto!=="undefined"?crypto:{})`
+    );
+
+    // Patch the browser crypto module's randomBytes to use Node crypto when available
+    // randomBytes returns raw Uint8Array which breaks Buffer.concat in Node
+    // Pattern may vary between esbuild/Babel versions, so use flexible regex
+    code = code.replace(
+        /function randomBytes\(count\)\{var bytes=new Uint8Array\(count\);return crypto\.getRandomValues\(bytes\),bytes;\}/,
+        `function randomBytes(count){if(globalThis.__nodeCrypto&&globalThis.__nodeCrypto.randomBytes){return globalThis.__nodeCrypto.randomBytes(count);}var bytes=new Uint8Array(count);crypto.getRandomValues(bytes);return Buffer2.from(bytes);}`
+    );
+    // Also handle alternate pattern with Buffer2.from
+    code = code.replace(
+        /function randomBytes\(count\)\{[^}]*crypto\.getRandomValues[^}]*Buffer2\.from[^}]*\}/,
+        `function randomBytes(count){if(globalThis.__nodeCrypto&&globalThis.__nodeCrypto.randomBytes){return globalThis.__nodeCrypto.randomBytes(count);}var bytes=new Uint8Array(count);crypto.getRandomValues(bytes);return Buffer2.from(bytes);}`
+    );
+
+    // Patch Hash.digest() to use Node crypto.subtle when available
+    // The Hash class uses self.crypto.subtle.digest which is async and browser-only
+    // We patch 'self.crypto.subtle.digest' calls to use Node's crypto.subtle.digest instead
+    // This requires patching the Hash class's digest method
+
+    // Patch Buffer2.concat to accept Uint8Array by converting them to Buffer
+    // This is critical for Node.js where crypto operations and WebSocket data
+    // may return Uint8Array instead of Buffer2 instances
+    code = code.replace(
+        /Buffer2\.concat=function\(list,length\)\{if\(!Array\.isArray\(list\)\)throw new TypeError\('"list" argument must be an Array of Buffers'\);if\(list\.length===0\)return Buffer2\.alloc\(0\);/g,
+        `Buffer2.concat=function(list,length){for(var i=0;i<list.length;i++){if(list[i]&&!(list[i] instanceof Buffer2)){list[i]=Buffer2.from(list[i]);}}if(!Array.isArray(list))throw new TypeError('"list" argument must be an Array of Buffers');if(list.length===0)return Buffer2.alloc(0);`
+    );
+
+    // Patch Buffer2.equals and Buffer2.compare to accept Uint8Array by converting first
+    code = code.replace(
+        /Buffer2\.prototype\.equals=function\(b\)\{if\(!internalIsBuffer\(b\)\)throw new TypeError\("Argument must be a Buffer"\);return this===b\?!0:Buffer2\.compare\(this,b\)===0;\}/,
+        `Buffer2.prototype.equals=function(b){if(b instanceof Uint8Array&&!internalIsBuffer(b)){b=Buffer2.from(b.buffer,b.byteOffset,b.byteLength);}if(!internalIsBuffer(b))throw new TypeError("Argument must be a Buffer");return this===b?!0:Buffer2.compare(this,b)===0;}`
+    );
+    code = code.replace(
+        /Buffer2\.compare=function\(a,b\)\{if\(!internalIsBuffer\(a\)\|\|!internalIsBuffer\(b\)\)throw new TypeError\("Arguments must be Buffers"\);if\(a===b\)return 0;/,
+        `Buffer2.compare=function(a,b){if(a instanceof Uint8Array&&!internalIsBuffer(a)){a=Buffer2.from(a.buffer,a.byteOffset,a.byteLength);}if(b instanceof Uint8Array&&!internalIsBuffer(b)){b=Buffer2.from(b.buffer,b.byteOffset,b.byteLength);}if(!internalIsBuffer(a)||!internalIsBuffer(b))throw new TypeError("Arguments must be Buffers");if(a===b)return 0;`
+    );
+
+    fs.writeFileSync(bundlePath, code);
+    console.log('Patched crypto polyfill');
 
     console.log('Bundle created successfully!');
     console.log('Output:', bundlePath);

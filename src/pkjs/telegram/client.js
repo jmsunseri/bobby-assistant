@@ -44,6 +44,9 @@ function initClient() {
                 var stringSession = new StringSession(storedSession || '');
                 client = new TelegramClient(stringSession, process.env.TELEGRAM_APP_ID || 0, process.env.TELEGRAM_APP_HASH || '', {
                     connectionRetries: 5,
+                    deviceModel: 'Clawd',
+                    systemVersion: '1.0',
+                    appVersion: '1.0',
                 });
 
                 client.connect().then(function() {

@@ -41,7 +41,11 @@ function sendCode(phoneNumber) {
 
         if (client.getClient()) {
             console.log('[auth] GramJS client available, sending code...');
-            client.getClient().sendCode(phoneNumber).then(function(result) {
+            client.getClient().sendCode(
+                { apiId: parseInt(process.env.TELEGRAM_APP_ID), apiHash: process.env.TELEGRAM_APP_HASH },
+                phoneNumber,
+                false
+            ).then(function(result) {
                 console.log('[auth] Code sent successfully, phoneCodeHash: ' + (result.phoneCodeHash ? 'received' : 'missing'));
                 authState.phoneCodeHash = result.phoneCodeHash;
                 authState.isWaitingForCode = true;
