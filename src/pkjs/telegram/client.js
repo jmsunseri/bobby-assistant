@@ -52,9 +52,11 @@ function initClient() {
                 client.connect().then(function() {
                     isConnected = true;
                     console.log('[client] Telegram client connected successfully');
+                    console.log('[client] Client details - connected: ' + client.connected + ', session DC: ' + (client.session && client.session.dcId ? client.session.dcId : 'unknown'));
                     resolve(true);
                 }).catch(function(err) {
                     console.error('[client] Failed to connect to Telegram: ' + (err.message || err));
+                    console.error('[client] Error stack: ' + (err.stack || 'no stack'));
                     reject(err);
                 });
             } else {

@@ -39,14 +39,21 @@ function sendCode(phoneNumber) {
     return new Promise(function(resolve, reject) {
         authState.phoneNumber = phoneNumber;
 
-        if (client.getClient()) {
+        var gramjsClient = client.getClient();
+        console.log('[auth] Client available: ' + !!gramjsClient + ', connected: ' + client.isClientConnected());
+        if (gramjsClient) {
             console.log('[auth] GramJS client available, sending code...');
-            client.getClient().sendCode(
-                { apiId: parseInt(process.env.TELEGRAM_APP_ID), apiHash: process.env.TELEGRAM_APP_HASH },
+            console.log('[auth] Client connected: ' + gramjsClient.connected + ', session DC: ' + (gramjsClient.session && gramjsClient.session.dcId ? gramjsClient.session.dcId : 'unknown'));
+            var apiId = parseInt(process.env.TELEGRAM_APP_ID);
+            var apiHash = process.env.TELEGRAM_APP_HASH || '';
+            console.log('[auth] API ID: ' + apiId + ', hash length: ' + apiHash.length);
+            gramjsClient.sendCode(
+                { apiId: apiId, apiHash: apiHash },
                 phoneNumber,
                 false
             ).then(function(result) {
                 console.log('[auth] Code sent successfully, phoneCodeHash: ' + (result.phoneCodeHash ? 'received' : 'missing'));
+                console.log('[auth] SendCode result keys: ' + Object.keys(result).join(', '));
                 authState.phoneCodeHash = result.phoneCodeHash;
                 authState.isWaitingForCode = true;
                 resolve({
@@ -56,6 +63,8 @@ function sendCode(phoneNumber) {
                 });
             }).catch(function(err) {
                 console.error('[auth] Failed to send code: ' + err.message);
+                console.error('[auth] Error type: ' + (err.constructor ? err.constructor.name : 'unknown'));
+                console.error('[auth] Error stack: ' + (err.stack || 'no stack'));
                 reject(new Error('Failed to send code: ' + err.message));
             });
         } else {

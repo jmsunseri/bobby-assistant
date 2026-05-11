@@ -47,7 +47,7 @@ function sendTelegramStatus() {
 function handleTelegramSendCode(action) {
     console.log('[index] Sending verification code to: ' + action.phoneNumber);
     telegram.sendCode(action.phoneNumber).then(function(result) {
-        console.log('[index] Code sent successfully: ' + JSON.stringify(result));
+        console.log('[index] Code sent result: ' + JSON.stringify(result));
         config.setSetting('clay_telegram_auth_state', JSON.stringify({
             waitingForCode: true,
             phoneNumber: action.phoneNumber
@@ -127,10 +127,11 @@ function handleAppMessage(e) {
         try { action = JSON.parse(data.TELEGRAM_PENDING_ACTION); } catch (e) { console.error('[index] Failed to parse TELEGRAM_PENDING_ACTION: ' + data.TELEGRAM_PENDING_ACTION); }
         console.log('[index] Telegram pending action: ' + JSON.stringify(action));
         telegram.initClient().then(function() {
-            console.log('[index] Telegram client initialized');
+            console.log('[index] Telegram client initialized, connected: ' + telegram.isClientConnected());
             handleTelegramAction(action);
         }).catch(function(err) {
             console.error('[index] Failed to initialize Telegram client: ' + err.message);
+            console.error('[index] Error stack: ' + (err.stack || 'no stack'));
         });
         return;
     }
