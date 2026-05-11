@@ -61,6 +61,7 @@ esbuild.build({
     // Prepend banner
     const banner = `// Telegram/GramJS bundle for Clawd
 // Run 'npm install && npm run build:telegram' in scripts/ directory to rebuild
+// Build time: ${new Date().toISOString()}
 // Polyfills for browser environment
 if (typeof globalThis === 'undefined') {
     if (typeof global !== 'undefined') globalThis = global;
@@ -151,7 +152,12 @@ if (typeof Telegram !== 'undefined') {
         `Buffer2.concat=function(list,length){for(var i=0;i<list.length;i++){if(list[i]&&!(list[i] instanceof Buffer2)){list[i]=Buffer2.from(list[i]);}}if(!Array.isArray(list))throw new TypeError('"list" argument must be an Array of Buffers');if(list.length===0)return Buffer2.alloc(0);`
     );
 
-    // Add diagnostic logging after CryptoFile_1 is imported to see what it contains
+    // Append build timestamp to GramJS version log
+    const buildTime = new Date().toISOString();
+    code = code.replace(
+        /Running gramJS version "\+__1\.version\)/,
+        `Running gramJS version "+__1.version+", bundle built: ${buildTime})`
+    );
     code = code.replace(
         /CryptoFile_1=__importDefault2\(require_CryptoFile\(\)\),platform_1=require_platform\(\);/,
         `CryptoFile_1=__importDefault2(require_CryptoFile()),platform_1=require_platform();console.log("[diagnostic] CryptoFile_1.default type:",typeof CryptoFile_1,"default type:",typeof CryptoFile_1.default,"randomBytes:",typeof(CryptoFile_1.default&&CryptoFile_1.default.randomBytes),"sha1:",typeof(CryptoFile_1.default&&CryptoFile_1.default.sha1),"createHash:",typeof(CryptoFile_1.default&&CryptoFile_1.default.createHash));`
