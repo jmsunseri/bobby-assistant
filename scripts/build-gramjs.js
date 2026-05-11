@@ -122,7 +122,7 @@ if (typeof Telegram !== 'undefined') {
     // regardless of whether __nodeCrypto is available.
     code = code.replace(
         /var polyfill=\(init_crypto\(\),__toCommonJS\(crypto_exports\)\);if\(polyfill&&polyfill\.default\)\{module\.exports=polyfill\.default;for\(var k in polyfill\)module\.exports\[k\]=polyfill\[k\];\}else polyfill&&\(module\.exports=polyfill\);/,
-        `var polyfill=(init_crypto(),__toCommonJS(crypto_exports));if(polyfill&&polyfill.default){module.exports=polyfill.default;for(var k in polyfill)module.exports[k]=polyfill[k];}else polyfill&&(module.exports=polyfill);var c2=require_crypto2();if(c2){if(!module.exports.randomBytes&&c2.randomBytes)module.exports.randomBytes=c2.randomBytes;if(!module.exports.createHash&&c2.createHash)module.exports.createHash=c2.createHash;if(!module.exports.pbkdf2Sync&&c2.pbkdf2Sync)module.exports.pbkdf2Sync=c2.pbkdf2Sync;if(!module.exports.sha1&&c2.sha1)module.exports.sha1=c2.sha1;if(!module.exports.sha256&&c2.sha256)module.exports.sha256=c2.sha256;}`
+        `var polyfill=(init_crypto(),__toCommonJS(crypto_exports));if(polyfill&&polyfill.default){module.exports=polyfill.default;for(var k in polyfill)module.exports[k]=polyfill[k];}else polyfill&&(module.exports=polyfill);try{console.log("[crypto] merging require_crypto2 into crypto polyfill");var c2=require_crypto2();console.log("[crypto] c2 type:",typeof c2);console.log("[crypto] c2.randomBytes:",typeof(c2&&c2.randomBytes));if(c2){if(!module.exports.randomBytes&&c2.randomBytes)module.exports.randomBytes=c2.randomBytes;if(!module.exports.createHash&&c2.createHash)module.exports.createHash=c2.createHash;if(!module.exports.pbkdf2Sync&&c2.pbkdf2Sync)module.exports.pbkdf2Sync=c2.pbkdf2Sync;if(!module.exports.sha1&&c2.sha1)module.exports.sha1=c2.sha1;if(!module.exports.sha256&&c2.sha256)module.exports.sha256=c2.sha256;}console.log("[crypto] module.exports.randomBytes:",typeof module.exports.randomBytes);}catch(e){console.log("[crypto] error merging crypto2:",e.message);}`
     );
 
     // Patch the browser crypto module's randomBytes to use Node crypto when available
@@ -151,7 +151,11 @@ if (typeof Telegram !== 'undefined') {
         `Buffer2.concat=function(list,length){for(var i=0;i<list.length;i++){if(list[i]&&!(list[i] instanceof Buffer2)){list[i]=Buffer2.from(list[i]);}}if(!Array.isArray(list))throw new TypeError('"list" argument must be an Array of Buffers');if(list.length===0)return Buffer2.alloc(0);`
     );
 
-    // Patch Buffer2.equals and Buffer2.compare to accept Uint8Array by converting first
+    // Add diagnostic logging after CryptoFile_1 is imported to see what it contains
+    code = code.replace(
+        /CryptoFile_1=__importDefault2\(require_CryptoFile\(\)\),platform_1=require_platform\(\);/,
+        `CryptoFile_1=__importDefault2(require_CryptoFile()),platform_1=require_platform();console.log("[diagnostic] CryptoFile_1.default type:",typeof CryptoFile_1,"default type:",typeof CryptoFile_1.default,"randomBytes:",typeof(CryptoFile_1.default&&CryptoFile_1.default.randomBytes),"sha1:",typeof(CryptoFile_1.default&&CryptoFile_1.default.sha1),"createHash:",typeof(CryptoFile_1.default&&CryptoFile_1.default.createHash));`
+    );
     code = code.replace(
         /Buffer2\.prototype\.equals=function\(b\)\{if\(!internalIsBuffer\(b\)\)throw new TypeError\("Argument must be a Buffer"\);return this===b\?!0:Buffer2\.compare\(this,b\)===0;\}/,
         `Buffer2.prototype.equals=function(b){if(b instanceof Uint8Array&&!internalIsBuffer(b)){b=Buffer2.from(b.buffer,b.byteOffset,b.byteLength);}if(!internalIsBuffer(b))throw new TypeError("Argument must be a Buffer");return this===b?!0:Buffer2.compare(this,b)===0;}`
