@@ -106,21 +106,23 @@ if (typeof Telegram !== 'undefined') {
     // So we expose Node's crypto on the global and reference it from the polyfill
     let code = fs.readFileSync(bundlePath, 'utf8');
 
-    // Patch the main crypto polyfill (CryptoFile)
-    // On Node: use globalThis.__nodeCrypto (Node's crypto module)
-    // On browser/Pebble: the browser 'crypto' object only has getRandomValues/subtle,
-    // but GramJS needs randomBytes, sha1, sha256, createHash, pbkdf2Sync.
-    // We leave crypto_default as {} initially, then monkey-patch it after
-    // require_crypto2 (GramJS's browser crypto shim) is loaded.
+    // Patch the crypto polyfill (CryptoFile) to include GramJS's browser crypto shim.
+    // esbuild's NodeModulesPolyfillPlugin replaces 'crypto' with an empty object {}.
+    // GramJS's CryptoFile imports this and expects randomBytes, sha1, sha256, etc.
+    // On Node, globalThis.__nodeCrypto has everything. On Pebble/browser, we need
+    // to merge in the functions from require_crypto2 (GramJS's own browser crypto).
+    // Since require_crypto2 is registered before its factory is first called,
+    // we can call it from inside require_crypto's factory and merge exports.
     code = code.replace(
         /crypto_default=\{\}/g,
         `crypto_default=(globalThis.__nodeCrypto)?globalThis.__nodeCrypto:{};`
     );
-    // After require_crypto2 is defined, copy its exports into crypto_default
-    // so CryptoFile_1.default.randomBytes etc. work on Pebble/browser
+    // Patch require_crypto's factory to merge in require_crypto2's exports.
+    // This ensures crypto_default has randomBytes, createHash, pbkdf2Sync, sha1, sha256
+    // regardless of whether __nodeCrypto is available.
     code = code.replace(
-        /function createHash\(algorithm\)\{return new Hash\(algorithm\);\}\}\}\);\/\/ node_modules\/telegram\/crypto\/CTR\.js/,
-        `function createHash(algorithm){return new Hash(algorithm);}if(!crypto_default.randomBytes){crypto_default.randomBytes=randomBytes;crypto_default.createHash=createHash;crypto_default.pbkdf2Sync=pbkdf2Sync;crypto_default.sha1=function(d){var h=createHash("sha1");return h.update(d),h.digest();};crypto_default.sha256=function(d){var h=createHash("sha256");return h.update(d),h.digest();};}}});;// node_modules/telegram/crypto/CTR.js`
+        /var polyfill=\(init_crypto\(\),__toCommonJS\(crypto_exports\)\);if\(polyfill&&polyfill\.default\)\{module\.exports=polyfill\.default;for\(var k in polyfill\)module\.exports\[k\]=polyfill\[k\];\}else polyfill&&\(module\.exports=polyfill\);/,
+        `var polyfill=(init_crypto(),__toCommonJS(crypto_exports));if(polyfill&&polyfill.default){module.exports=polyfill.default;for(var k in polyfill)module.exports[k]=polyfill[k];}else polyfill&&(module.exports=polyfill);var c2=require_crypto2();if(c2){if(!module.exports.randomBytes&&c2.randomBytes)module.exports.randomBytes=c2.randomBytes;if(!module.exports.createHash&&c2.createHash)module.exports.createHash=c2.createHash;if(!module.exports.pbkdf2Sync&&c2.pbkdf2Sync)module.exports.pbkdf2Sync=c2.pbkdf2Sync;if(!module.exports.sha1&&c2.sha1)module.exports.sha1=c2.sha1;if(!module.exports.sha256&&c2.sha256)module.exports.sha256=c2.sha256;}`
     );
 
     // Patch the browser crypto module's randomBytes to use Node crypto when available
