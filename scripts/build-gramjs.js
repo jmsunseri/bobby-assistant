@@ -114,7 +114,7 @@ if (typeof Telegram !== 'undefined') {
     // since require_crypto2 is defined later in the bundle.
     code = code.replace(
         /crypto_default=\{\}/g,
-        `crypto_default=(globalThis.__nodeCrypto)?globalThis.__nodeCrypto:(function(){var _c2=null;function getC2(){if(_c2)return _c2;if(typeof __crypto2Fallback!=="undefined")return _c2=__crypto2Fallback;return _c2;}return{get randomBytes(){return getC2()&&getC2().randomBytes;},get createHash(){return getC2()&&getC2().createHash;},get pbkdf2Sync(){return getC2()&&getC2().pbkdf2Sync;},get sha1(){return getC2()&&getC2().sha1;},get sha256(){return getC2()&&getC2().sha256;}};})()`
+        `crypto_default=(globalThis.__nodeCrypto)?globalThis.__nodeCrypto:(function(){var _c2=null;function getC2(){if(_c2)return _c2;if(globalThis.__crypto2Fallback)return _c2=globalThis.__crypto2Fallback;return _c2;}return{get randomBytes(){return getC2()&&getC2().randomBytes;},get createHash(){return getC2()&&getC2().createHash;},get pbkdf2Sync(){return getC2()&&getC2().pbkdf2Sync;},get sha1(){return getC2()&&getC2().sha1;},get sha256(){return getC2()&&getC2().sha256;}};})()`
     );
     // After require_crypto2 is defined, save its exports as globalThis.__crypto2Fallback
     // so the lazy proxy in crypto_default can find these functions
