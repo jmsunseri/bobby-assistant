@@ -156,11 +156,11 @@ if (typeof Telegram !== 'undefined') {
     const buildTime = new Date().toISOString();
     code = code.replace(
         /Running gramJS version "\+__1\.version\)/,
-        `Running gramJS version "+__1.version+", bundle built: ${buildTime})`
+        `Running gramJS version "+__1.version+", bundle built: "+${JSON.stringify(buildTime)})`
     );
     code = code.replace(
         /CryptoFile_1=__importDefault2\(require_CryptoFile\(\)\),platform_1=require_platform\(\);/,
-        `CryptoFile_1=__importDefault2(require_CryptoFile()),platform_1=require_platform();console.log("[diagnostic] CryptoFile_1.default type:",typeof CryptoFile_1,"default type:",typeof CryptoFile_1.default,"randomBytes:",typeof(CryptoFile_1.default&&CryptoFile_1.default.randomBytes),"sha1:",typeof(CryptoFile_1.default&&CryptoFile_1.default.sha1),"createHash:",typeof(CryptoFile_1.default&&CryptoFile_1.default.createHash));`
+        `CryptoFile_1=__importDefault2(require_CryptoFile()),platform_1=require_platform();(function(){var cf=CryptoFile_1.default;console.log("[diagnostic] CryptoFile_1.default type:",typeof cf,"randomBytes:",typeof cf==="object"?typeof cf.randomBytes:"no-obj","sha1:",typeof cf==="object"?typeof cf.sha1:"no-obj","createHash:",typeof cf==="object"?typeof cf.createHash:"no-obj");})();`
     );
     code = code.replace(
         /Buffer2\.prototype\.equals=function\(b\)\{if\(!internalIsBuffer\(b\)\)throw new TypeError\("Argument must be a Buffer"\);return this===b\?!0:Buffer2\.compare\(this,b\)===0;\}/,
