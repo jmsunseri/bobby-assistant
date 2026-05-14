@@ -48,14 +48,14 @@ function handleTelegramSendCode(action) {
     console.log('[index] Sending verification code to: ' + action.phoneNumber);
     telegram.sendCode(action.phoneNumber).then(function(result) {
         console.log('[index] Code sent result: ' + JSON.stringify(result));
-        config.setSetting('clay_telegram_auth_state', JSON.stringify({
+        localStorage.setItem('clay_telegram_auth_state', JSON.stringify({
             waitingForCode: true,
             phoneNumber: action.phoneNumber
         }));
         sendTelegramStatus();
     }).catch(function(err) {
         console.error('[index] Failed to send code: ' + err.message);
-        config.setSetting('clay_telegram_auth_state', JSON.stringify({
+        localStorage.setItem('clay_telegram_auth_state', JSON.stringify({
             error: err.message,
             phoneNumber: action.phoneNumber
         }));
@@ -69,13 +69,13 @@ function handleTelegramSignIn(action) {
         console.log('[index] Sign in result: ' + JSON.stringify(result));
         if (result.status === '2fa_required') {
             console.log('[index] 2FA required - user needs to provide password');
-            config.setSetting('clay_telegram_auth_state', JSON.stringify({
+            localStorage.setItem('clay_telegram_auth_state', JSON.stringify({
                 waitingForCode: false,
                 needs2FA: true,
                 phoneNumber: telegram.getAuthState().phoneNumber
             }));
         } else {
-            config.setSetting('clay_telegram_auth_state', '');
+            localStorage.removeItem('clay_telegram_auth_state');
         }
         sendTelegramStatus();
     }).catch(function(err) {
@@ -88,7 +88,7 @@ function handleTelegramDisconnect() {
     console.log('[index] Disconnecting from Telegram');
     telegram.logout().then(function() {
         console.log('[index] Disconnected successfully');
-        config.setSetting('clay_telegram_auth_state', '');
+        localStorage.removeItem('clay_telegram_auth_state');
         sendTelegramStatus();
     }).catch(function(err) {
         console.error('[index] Failed to disconnect: ' + err.message);
