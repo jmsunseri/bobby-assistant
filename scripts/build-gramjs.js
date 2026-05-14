@@ -202,13 +202,16 @@ function _toArrayBlob(data) {
 
     // Append footer
     const footer = `
-// Expose TelegramClient and StringSession as globals for Clawd
+// Expose TelegramClient, StringSession, and Api as globals for Clawd
 if (typeof Telegram !== 'undefined') {
     if (Telegram.TelegramClient) {
         (typeof window !== 'undefined' ? window : global).TelegramClient = Telegram.TelegramClient;
     }
     if (Telegram.StringSession) {
         (typeof window !== 'undefined' ? window : global).StringSession = Telegram.StringSession;
+    }
+    if (Telegram.Api) {
+        (typeof window !== 'undefined' ? window : global).TelegramApi = Telegram.Api;
     }
     if (Telegram.NewMessage) {
         (typeof window !== 'undefined' ? window : global).NewMessage = Telegram.NewMessage;

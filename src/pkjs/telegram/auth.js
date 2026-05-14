@@ -83,30 +83,47 @@ function signIn(code) {
             return;
         }
 
-        if (client.getClient()) {
+        var gramjsClient = client.getClient();
+        if (gramjsClient) {
             console.log('[auth] GramJS client available, attempting sign in...');
-            client.getClient().signIn({
-                code: code,
+            gramjsClient.invoke(new TelegramApi.auth.SignIn({
                 phoneNumber: authState.phoneNumber,
-                phoneCodeHash: authState.phoneCodeHash
-            }).then(function(user) {
-                console.log('[auth] Sign in successful, user: ' + (user.firstName || 'unknown') + ' (id: ' + user.id + ')');
-                var sessionStr = client.getClient().session.save();
-                session.saveSession(sessionStr);
+                phoneCodeHash: authState.phoneCodeHash,
+                phoneCode: code
+            })).then(function(result) {
+                if (result.user) {
+                    var user = result.user;
+                    console.log('[auth] Sign in successful, user: ' + (user.firstName || 'unknown') + ' (id: ' + user.id + ')');
+                    var sessionStr = gramjsClient.session.save();
+                    session.saveSession(sessionStr);
 
-                authState.isWaitingForCode = false;
-                authState.phoneCodeHash = null;
+                    authState.isWaitingForCode = false;
+                    authState.phoneCodeHash = null;
 
-                resolve({
-                    success: true,
-                    status: 'signed_in',
-                    user: {
-                        id: user.id,
-                        firstName: user.firstName,
-                        lastName: user.lastName,
-                        username: user.username
-                    }
-                });
+                    resolve({
+                        success: true,
+                        status: 'signed_in',
+                        user: {
+                            id: user.id,
+                            firstName: user.firstName,
+                            lastName: user.lastName,
+                            username: user.username
+                        }
+                    });
+                } else if (result.className === 'auth.AuthorizationSignUpRequired') {
+                    console.log('[auth] Sign up required');
+                    resolve({
+                        success: false,
+                        status: 'sign_up_required',
+                        message: 'Sign up required.'
+                    });
+                } else {
+                    console.log('[auth] Unexpected sign in result: ' + (result.className || typeof result));
+                    resolve({
+                        success: true,
+                        status: 'signed_in'
+                    });
+                }
             }).catch(function(err) {
                 if (err.message && err.message.includes('SESSION_PASSWORD_NEEDED')) {
                     console.log('[auth] 2FA required for user');
@@ -117,6 +134,7 @@ function signIn(code) {
                     });
                 } else {
                     console.error('[auth] Failed to sign in: ' + err.message);
+                    console.error('[auth] Error stack: ' + (err.stack || 'no stack'));
                     reject(new Error('Failed to sign in: ' + err.message));
                 }
             });
