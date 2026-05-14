@@ -282,6 +282,28 @@ if (typeof Telegram !== 'undefined') {
         'platform_1.isBrowser&&_safeAddEventListener(window,"offline"'
     );
 
+    // Add WebSocket debug logging in PromisedWebSockets.connect()
+    // Log WebSocket creation and all events to diagnose Pebble connection hangs
+    code = code.replace(
+        /this\.website=this\.getWebSocketLink\(ip,port,testServers\),this\.client=new websocket_1\.w3cwebsocket\(this\.website,"binary"\),new Promise\(function\(resolve2,reject\)\{_this33\.client&&\(_this33\.client\.onopen/,
+        'this.website=this.getWebSocketLink(ip,port,testServers),console.log("[ws] Creating WebSocket to: "+this.website),this.client=new websocket_1.w3cwebsocket(this.website,"binary"),console.log("[ws] WebSocket created, readyState: "+(this.client?this.client.readyState:"null-client")),console.log("[ws] WebSocket type: "+typeof this.client+", constructor: "+(this.client&&this.client.constructor?this.client.constructor.name:"unknown")),new Promise(function(resolve2,reject){_this33.client&&(_this33.client.onopen'
+    );
+    // Log onopen event
+    code = code.replace(
+        /_this33\.client\.onopen=function\(\)\{_this33\.receive\(\),resolve2\(_this33\)/,
+        '_this33.client.onopen=function(){console.log("[ws] onopen fired, readyState: "+_this33.client.readyState);_this33.receive(),resolve2(_this33)'
+    );
+    // Log onerror event
+    code = code.replace(
+        /_this33\.client\.onerror=function\(error\)\{reject\(error\)/,
+        '_this33.client.onerror=function(error){console.log("[ws] onerror fired, readyState: "+(_this33.client?_this33.client.readyState:"no-client")+", typeof error: "+typeof error);reject(error)'
+    );
+    // Log onclose event
+    code = code.replace(
+        /_this33\.client\.onclose=function\(\)\{_this33\.resolveRead&&_this33\.resolveRead\(!1\),_this33\.closed=!0/,
+        '_this33.client.onclose=function(){console.log("[ws] onclose fired, readyState: "+(_this33.client?_this33.client.readyState:"no-client"));_this33.resolveRead&&_this33.resolveRead(!1),_this33.closed=!0'
+    );
+
     fs.writeFileSync(bundlePath, code);
     console.log('Patched crypto polyfill');
 
