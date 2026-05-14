@@ -52,6 +52,7 @@ function handleTelegramSendCode(action) {
             waitingForCode: true,
             phoneNumber: action.phoneNumber
         }));
+        console.log('[index] Auth state saved to localStorage: ' + localStorage.getItem('clay_telegram_auth_state'));
         sendTelegramStatus();
     }).catch(function(err) {
         console.error('[index] Failed to send code: ' + err.message);

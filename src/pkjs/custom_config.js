@@ -44,7 +44,11 @@ module.exports = function(minified) {
     }
 
     function getAuthState() {
-        try { return JSON.parse(localStorage.getItem(AUTH_STATE_KEY)) || {}; } catch (e) { return {}; }
+        try {
+            var raw = localStorage.getItem(AUTH_STATE_KEY);
+            console.log('[config] Reading auth state from localStorage key "' + AUTH_STATE_KEY + '": ' + raw);
+            return JSON.parse(raw) || {};
+        } catch (e) { return {}; }
     }
 
     function setAuthState(state) {
@@ -85,7 +89,8 @@ module.exports = function(minified) {
 
         console.log('[config] updateUI: session=' + (session ? 'present' : 'none') +
             ', waitingForCode=' + !!authState.waitingForCode +
-            ', needs2FA=' + !!authState.needs2FA);
+            ', needs2FA=' + !!authState.needs2FA +
+            ', raw auth state: ' + JSON.stringify(authState));
 
         if (pendingActionInput) { pendingActionInput.hide(); }
 
