@@ -49,12 +49,19 @@ function initClient() {
                     appVersion: '1.0',
                 });
 
+                console.log('[client] Calling client.connect()...');
+                var connectTimeout = setTimeout(function() {
+                    console.error('[client] Connection timed out after 30s');
+                    reject(new Error('Connection to Telegram timed out'));
+                }, 30000);
                 client.connect().then(function() {
+                    clearTimeout(connectTimeout);
                     isConnected = true;
                     console.log('[client] Telegram client connected successfully');
                     console.log('[client] Client details - connected: ' + client.connected + ', session DC: ' + (client.session && client.session.dcId ? client.session.dcId : 'unknown'));
                     resolve(true);
                 }).catch(function(err) {
+                    clearTimeout(connectTimeout);
                     console.error('[client] Failed to connect to Telegram: ' + (err.message || err));
                     console.error('[client] Error stack: ' + (err.stack || 'no stack'));
                     reject(err);
