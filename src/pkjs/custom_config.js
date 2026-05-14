@@ -45,18 +45,30 @@ module.exports = function(minified) {
 
     function getAuthState() {
         try {
-            var raw = localStorage.getItem(AUTH_STATE_KEY);
-            console.log('[config] Reading auth state from localStorage key "' + AUTH_STATE_KEY + '": ' + raw);
-            return JSON.parse(raw) || {};
-        } catch (e) { return {}; }
+            var settings = JSON.parse(localStorage.getItem('clay-settings')) || {};
+            var raw = settings.clay_telegram_auth_state;
+            console.log('[config] Reading auth state from clay-settings: ' + (raw ? raw.substring(0, 100) : 'null'));
+            return (raw && typeof raw === 'string') ? JSON.parse(raw) : (raw || {});
+        } catch (e) {
+            console.log('[config] Error reading auth state: ' + e.message);
+            return {};
+        }
     }
 
     function setAuthState(state) {
-        try { localStorage.setItem(AUTH_STATE_KEY, JSON.stringify(state)); } catch (e) {}
+        try {
+            var settings = JSON.parse(localStorage.getItem('clay-settings')) || {};
+            settings.clay_telegram_auth_state = JSON.stringify(state);
+            localStorage.setItem('clay-settings', JSON.stringify(settings));
+        } catch (e) {}
     }
 
     function clearAuthState() {
-        try { localStorage.removeItem(AUTH_STATE_KEY); } catch (e) {}
+        try {
+            var settings = JSON.parse(localStorage.getItem('clay-settings')) || {};
+            delete settings.clay_telegram_auth_state;
+            localStorage.setItem('clay-settings', JSON.stringify(settings));
+        } catch (e) {}
     }
 
     function getBotUsername() {
@@ -115,8 +127,9 @@ module.exports = function(minified) {
             if (disconnectBtn) disconnectBtn.hide();
             if (botInput) botInput.show();
         } else {
-            var debugInfo = ' [DEBUG: keys=' + allKeys.join(',') + ' raw=' + (rawAuthState || 'null') + ']';
-            setStatus('Not connected.' + debugInfo);
+            var authInfo = authState.waitingForCode ? ' (code sent, waiting for entry)' :
+                           authState.error ? ' (error: ' + authState.error + ')' : '';
+            setStatus('Not connected. Enter your phone number and save to send a verification code.' + authInfo);
             console.log('[config] UI state: not connected');
             if (phoneInput) {
                 phoneInput.show();

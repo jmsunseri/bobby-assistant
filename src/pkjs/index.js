@@ -48,16 +48,15 @@ function handleTelegramSendCode(action) {
     console.log('[index] Sending verification code to: ' + action.phoneNumber);
     telegram.sendCode(action.phoneNumber).then(function(result) {
         console.log('[index] Code sent result: ' + JSON.stringify(result));
-        localStorage.setItem('clay_telegram_auth_state', JSON.stringify({
+        config.setSetting('clay_telegram_auth_state', JSON.stringify({
             waitingForCode: true,
             phoneNumber: action.phoneNumber
         }));
-        console.log('[index] Auth state saved. localStorage key "clay_telegram_auth_state" = ' + localStorage.getItem('clay_telegram_auth_state'));
-        console.log('[index] Full localStorage keys: ' + Object.keys(localStorage).join(', '));
+        console.log('[index] Auth state saved to clay-settings');
         sendTelegramStatus();
     }).catch(function(err) {
         console.error('[index] Failed to send code: ' + err.message);
-        localStorage.setItem('clay_telegram_auth_state', JSON.stringify({
+        config.setSetting('clay_telegram_auth_state', JSON.stringify({
             error: err.message,
             phoneNumber: action.phoneNumber
         }));
@@ -71,13 +70,13 @@ function handleTelegramSignIn(action) {
         console.log('[index] Sign in result: ' + JSON.stringify(result));
         if (result.status === '2fa_required') {
             console.log('[index] 2FA required - user needs to provide password');
-            localStorage.setItem('clay_telegram_auth_state', JSON.stringify({
+            config.setSetting('clay_telegram_auth_state', JSON.stringify({
                 waitingForCode: false,
                 needs2FA: true,
                 phoneNumber: telegram.getAuthState().phoneNumber
             }));
         } else {
-            localStorage.removeItem('clay_telegram_auth_state');
+            config.setSetting('clay_telegram_auth_state', '');
         }
         sendTelegramStatus();
     }).catch(function(err) {
@@ -90,7 +89,7 @@ function handleTelegramDisconnect() {
     console.log('[index] Disconnecting from Telegram');
     telegram.logout().then(function() {
         console.log('[index] Disconnected successfully');
-        localStorage.removeItem('clay_telegram_auth_state');
+        config.setSetting('clay_telegram_auth_state', '');
         sendTelegramStatus();
     }).catch(function(err) {
         console.error('[index] Failed to disconnect: ' + err.message);
