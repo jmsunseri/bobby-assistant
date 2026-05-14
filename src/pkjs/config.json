@@ -179,6 +179,12 @@
             },
             {
                 "type": "button",
+                "id": "haveCodeBtn",
+                "messageKey": "TELEGRAM_HAVE_CODE",
+                "defaultValue": "I have a code"
+            },
+            {
+                "type": "button",
                 "id": "resendCodeBtn",
                 "messageKey": "TELEGRAM_SEND_CODE",
                 "defaultValue": "Resend Code"

@@ -18,11 +18,12 @@ module.exports = function(minified) {
     var clayConfig = this;
 
     var telegramStatusText, phoneInput, codeInput, botInput;
-    var resendCodeBtn, disconnectBtn, pendingActionInput;
+    var haveCodeBtn, resendCodeBtn, disconnectBtn, pendingActionInput;
 
     var SESSION_KEY = 'telegram_session';
     var BOT_USERNAME_KEY = 'openclaw_bot_username';
-    var AUTH_STATE_KEY = 'clay_telegram_auth_state';
+
+    var showingCodeEntry = false;
 
     function setStatus(text, isError) {
         if (telegramStatusText) {
@@ -43,39 +44,13 @@ module.exports = function(minified) {
         try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
     }
 
-    function getAuthState() {
-        try {
-            var settings = JSON.parse(localStorage.getItem('clay-settings')) || {};
-            var raw = settings.clay_telegram_auth_state;
-            console.log('[config] Reading auth state from clay-settings: ' + (raw ? raw.substring(0, 100) : 'null'));
-            return (raw && typeof raw === 'string') ? JSON.parse(raw) : (raw || {});
-        } catch (e) {
-            console.log('[config] Error reading auth state: ' + e.message);
-            return {};
-        }
-    }
-
-    function setAuthState(state) {
-        try {
-            var settings = JSON.parse(localStorage.getItem('clay-settings')) || {};
-            settings.clay_telegram_auth_state = JSON.stringify(state);
-            localStorage.setItem('clay-settings', JSON.stringify(settings));
-        } catch (e) {}
-    }
-
-    function clearAuthState() {
-        try {
-            var settings = JSON.parse(localStorage.getItem('clay-settings')) || {};
-            delete settings.clay_telegram_auth_state;
-            localStorage.setItem('clay-settings', JSON.stringify(settings));
-        } catch (e) {}
-    }
-
     function getBotUsername() {
         var username = localStorage.getItem(BOT_USERNAME_KEY);
-        if (!username) {
+        try {
             var settings = JSON.parse(localStorage.getItem('clay-settings')) || {};
-            username = settings.OPENCLAW_BOT || '@OpenClawBot';
+            if (!username) { username = settings.OPENCLAW_BOT || '@OpenClawBot'; }
+        } catch (e) {
+            if (!username) { username = '@OpenClawBot'; }
         }
         if (username && !username.startsWith('@')) { username = '@' + username; }
         return username || '@OpenClawBot';
@@ -95,51 +70,39 @@ module.exports = function(minified) {
         }
     }
 
+    function showCodeEntry() {
+        showingCodeEntry = true;
+        setStatus('Enter the verification code sent to your phone, then press Save.');
+        if (phoneInput) phoneInput.hide();
+        if (codeInput) codeInput.show();
+        if (haveCodeBtn) haveCodeBtn.hide();
+        if (resendCodeBtn) resendCodeBtn.show();
+        if (disconnectBtn) disconnectBtn.hide();
+        if (botInput) botInput.hide();
+        if (codeInput) {
+            try { codeInput.$element[0].querySelector('input').focus(); } catch (e) {}
+        }
+    }
+
     function updateUI() {
-        var session = loadSession();
-        var authState = getAuthState();
-        var rawAuthState = localStorage.getItem(AUTH_STATE_KEY);
-        var allKeys = [];
-        try { for (var i = 0; i < localStorage.length; i++) { allKeys.push(localStorage.key(i)); } } catch(e) {}
-
-        console.log('[config] updateUI: session=' + (session ? 'present' : 'none') +
-            ', waitingForCode=' + !!authState.waitingForCode +
-            ', needs2FA=' + !!authState.needs2FA +
-            ', AUTH_STATE_KEY=' + AUTH_STATE_KEY +
-            ', raw localStorage=' + (rawAuthState ? rawAuthState.substring(0, 100) : 'null') +
-            ', all keys: ' + allKeys.join(', '));
-
         if (pendingActionInput) { pendingActionInput.hide(); }
 
+        var session = loadSession();
         if (session) {
             setStatus('Connected (' + getBotUsername() + ')');
             if (phoneInput) phoneInput.hide();
             if (codeInput) codeInput.hide();
+            if (haveCodeBtn) haveCodeBtn.hide();
             if (resendCodeBtn) resendCodeBtn.hide();
             if (disconnectBtn) disconnectBtn.show();
             if (botInput) botInput.show();
-        } else if (authState.waitingForCode) {
-            setStatus('A verification code was sent to ' + (authState.phoneNumber || 'your phone') + '. Enter the code below and press Save.');
-            console.log('[config] UI state: waiting for code, phone: ' + (authState.phoneNumber || 'unknown'));
-            if (phoneInput) phoneInput.hide();
-            if (codeInput) codeInput.show();
-            if (resendCodeBtn) resendCodeBtn.show();
-            if (disconnectBtn) disconnectBtn.hide();
-            if (botInput) botInput.show();
+        } else if (showingCodeEntry) {
+            showCodeEntry();
         } else {
-            var authInfo = authState.waitingForCode ? ' (code sent, waiting for entry)' :
-                           authState.error ? ' (error: ' + authState.error + ')' : '';
-            setStatus('Not connected. Enter your phone number and save to send a verification code.' + authInfo);
-            console.log('[config] UI state: not connected');
-            if (phoneInput) {
-                phoneInput.show();
-                var phone = phoneInput.get();
-                if (phone) {
-                    console.log('[config] Auto-setting send_code action with existing phone number');
-                    setPendingAction({ action: 'send_code', phoneNumber: normalizePhone(phone) });
-                }
-            }
+            setStatus('Not connected. Enter your phone number and save to send a verification code.');
+            if (phoneInput) phoneInput.show();
             if (codeInput) codeInput.hide();
+            if (haveCodeBtn) haveCodeBtn.show();
             if (resendCodeBtn) resendCodeBtn.hide();
             if (disconnectBtn) disconnectBtn.hide();
             if (botInput) botInput.show();
@@ -157,23 +120,29 @@ module.exports = function(minified) {
         phoneInput = clayConfig.getItemByMessageKey('TELEGRAM_PHONE');
         codeInput = clayConfig.getItemByMessageKey('TELEGRAM_CODE');
         botInput = clayConfig.getItemByMessageKey('OPENCLAW_BOT');
+        haveCodeBtn = clayConfig.getItemByMessageKey('TELEGRAM_HAVE_CODE');
         resendCodeBtn = clayConfig.getItemByMessageKey('TELEGRAM_SEND_CODE');
         disconnectBtn = clayConfig.getItemByMessageKey('TELEGRAM_DISCONNECT');
         pendingActionInput = clayConfig.getItemByMessageKey('TELEGRAM_PENDING_ACTION');
 
         updateUI();
 
+        if (haveCodeBtn) {
+            haveCodeBtn.on('click', function() {
+                console.log('[config] "I have a code" clicked — showing code entry');
+                showCodeEntry();
+            });
+        }
+
         if (resendCodeBtn) {
             resendCodeBtn.on('click', function() {
-                var authState = getAuthState();
-                var phoneNumber = authState.phoneNumber || (phoneInput ? phoneInput.get() : '');
-                console.log('[config] Resend code clicked, phone: ' + (phoneNumber ? '****' + phoneNumber.slice(-4) : '(empty)'));
-                if (!phoneNumber) {
-                    setStatus('Please enter a phone number', true);
+                var phone = phoneInput ? phoneInput.get() : '';
+                console.log('[config] Resend code clicked, phone: ' + (phone ? '****' + phone.slice(-4) : '(empty)'));
+                if (!phone) {
+                    setStatus('No phone number on file. Go back and enter one.', true);
                     return;
                 }
-                phoneNumber = normalizePhone(phoneNumber);
-                setPendingAction({ action: 'send_code', phoneNumber: phoneNumber });
+                setPendingAction({ action: 'send_code', phoneNumber: normalizePhone(phone) });
                 setStatus('Save to resend the verification code.');
             });
         }
@@ -182,7 +151,7 @@ module.exports = function(minified) {
             disconnectBtn.on('click', function() {
                 console.log('[config] Disconnect button clicked');
                 clearSession();
-                clearAuthState();
+                showingCodeEntry = false;
                 setPendingAction({ action: 'disconnect' });
                 updateUI();
             });
@@ -195,20 +164,9 @@ module.exports = function(minified) {
             });
         }
 
-        if (phoneInput) {
-            phoneInput.on('change', function() {
-                var phone = phoneInput.get();
-                console.log('[config] Phone number changed: ' + (phone ? '****' + phone.slice(-4) : '(cleared)'));
-                if (phone) {
-                    setPendingAction({ action: 'send_code', phoneNumber: normalizePhone(phone) });
-                }
-            });
-        }
-
         if (codeInput) {
             codeInput.on('change', function() {
                 var code = codeInput.get();
-                console.log('[config] Verification code changed (length: ' + (code ? code.length : 0) + ')');
                 if (code) {
                     setPendingAction({ action: 'sign_in', code: code });
                 }
