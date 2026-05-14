@@ -2,21 +2,26 @@ var loaded = false;
 
 function ensureTelegramBundle() {
     if (!loaded) {
+        console.log('[bundle] Loading Telegram bundle...');
         if (typeof window === 'undefined') {
+            console.log('[bundle] No global window, creating minimal polyfill');
             global.window = { location: { protocol: 'https:' } };
         } else {
             if (!window.location) {
+                console.log('[bundle] No window.location, polyfilling');
                 window.location = { protocol: 'https:' };
             }
-            if (!window.addEventListener) {
-                window.addEventListener = function() {};
-            }
-            if (!window.removeEventListener) {
-                window.removeEventListener = function() {};
-            }
         }
-        require('./telegram-bundle.js');
-        loaded = true;
+        try {
+            require('./telegram-bundle.js');
+            loaded = true;
+            console.log('[bundle] Telegram bundle loaded successfully');
+            console.log('[bundle] TelegramClient available: ' + (typeof TelegramClient !== 'undefined'));
+            console.log('[bundle] StringSession available: ' + (typeof StringSession !== 'undefined'));
+        } catch (err) {
+            console.error('[bundle] Failed to load Telegram bundle: ' + (err.message || err));
+            console.error('[bundle] Stack: ' + (err.stack || 'no stack'));
+        }
     }
 }
 

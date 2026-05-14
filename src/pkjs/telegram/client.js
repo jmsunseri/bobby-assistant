@@ -41,8 +41,13 @@ function initClient() {
 
             if (typeof TelegramClient !== 'undefined') {
                 console.log('[client] GramJS available, creating TelegramClient...');
+                var apiId = parseInt(process.env.TELEGRAM_APP_ID, 10);
+                var apiHash = process.env.TELEGRAM_APP_HASH || '';
+                if (!apiId || !apiHash) {
+                    console.error('[client] TELEGRAM_APP_ID or TELEGRAM_APP_HASH not set! apiId: ' + apiId + ', apiHash length: ' + apiHash.length);
+                }
                 var stringSession = new StringSession(storedSession || '');
-                client = new TelegramClient(stringSession, process.env.TELEGRAM_APP_ID || 0, process.env.TELEGRAM_APP_HASH || '', {
+                client = new TelegramClient(stringSession, apiId || 0, apiHash, {
                     connectionRetries: 5,
                     deviceModel: 'Clawd',
                     systemVersion: '1.0',
@@ -50,45 +55,6 @@ function initClient() {
                 });
 
                 console.log('[client] Calling client.connect()...');
-                console.log('[client] WebSocket available: ' + (typeof WebSocket !== 'undefined') + ', type: ' + (typeof WebSocket));
-                console.log('[client] globalThis.crypto available: ' + (typeof globalThis.crypto !== 'undefined') + ', subtle: ' + (typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.subtle !== 'undefined'));
-                // Monkey-patch WebSocket to log connection events
-                var OrigWebSocket = WebSocket;
-                var wsIdx = 0;
-                WebSocket = function(url, protocols) {
-                    var id = ++wsIdx;
-                    console.log('[ws:' + id + '] Creating WebSocket to: ' + url);
-                    var ws = protocols ? new OrigWebSocket(url, protocols) : new OrigWebSocket(url);
-                    ws.addEventListener = function(type, handler) {
-                        console.log('[ws:' + id + '] addEventListener: ' + type);
-                        return OrigWebSocket.prototype.addEventListener ? OrigWebSocket.prototype.addEventListener.call(ws, type, handler) : ws['on' + type] = handler;
-                    };
-                    ws.removeEventListener = function(type, handler) {
-                        console.log('[ws:' + id + '] removeEventListener: ' + type);
-                        return OrigWebSocket.prototype.removeEventListener ? OrigWebSocket.prototype.removeEventListener.call(ws, type, handler) : delete ws['on' + type];
-                    };
-                    var origOnOpen = ws.onopen;
-                    ws.onopen = function(e) {
-                        console.log('[ws:' + id + '] onopen fired');
-                        if (origOnOpen) origOnOpen.call(ws, e);
-                    };
-                    var origOnError = ws.onerror;
-                    ws.onerror = function(e) {
-                        console.log('[ws:' + id + '] onerror fired: ' + (e.message || 'no message'));
-                        if (origOnError) origOnError.call(ws, e);
-                    };
-                    var origOnClose = ws.onclose;
-                    ws.onclose = function(e) {
-                        console.log('[ws:' + id + '] onclose fired: code=' + e.code + ' reason=' + e.reason);
-                        if (origOnClose) origOnClose.call(ws, e);
-                    };
-                    return ws;
-                };
-                WebSocket.prototype = OrigWebSocket.prototype;
-                WebSocket.CONNECTING = OrigWebSocket.CONNECTING;
-                WebSocket.OPEN = OrigWebSocket.OPEN;
-                WebSocket.CLOSING = OrigWebSocket.CLOSING;
-                WebSocket.CLOSED = OrigWebSocket.CLOSED;
                 var connectTimeout = setTimeout(function() {
                     console.error('[client] Connection timed out after 30s');
                     reject(new Error('Connection to Telegram timed out'));

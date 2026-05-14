@@ -178,6 +178,9 @@ if (typeof globalThis.crypto === 'undefined') globalThis.crypto = _crypto;
 if (typeof self !== 'undefined' && typeof self.crypto === 'undefined') self.crypto = _crypto;
 if (typeof window !== 'undefined' && typeof window.crypto === 'undefined') window.crypto = _crypto;
 })();
+function _safeAddEventListener(target, type, listener, options) {
+    try { target.addEventListener(type, listener, options); } catch(e) {}
+}
 
 `;
 
@@ -272,6 +275,11 @@ if (typeof Telegram !== 'undefined') {
     code = code.replace(
         /Buffer2\.compare=function\(a,b\)\{if\(!internalIsBuffer\(a\)\|\|!internalIsBuffer\(b\)\)throw new TypeError\("Arguments must be Buffers"\);if\(a===b\)return 0;/,
         `Buffer2.compare=function(a,b){if(a instanceof Uint8Array&&!internalIsBuffer(a)){a=Buffer2.from(a.buffer,a.byteOffset,a.byteLength);}if(b instanceof Uint8Array&&!internalIsBuffer(b)){b=Buffer2.from(b.buffer,b.byteOffset,b.byteLength);}if(!internalIsBuffer(a)||!internalIsBuffer(b))throw new TypeError("Arguments must be Buffers");if(a===b)return 0;`
+    );
+
+    code = code.replace(
+        /platform_1\.isBrowser&&window\.addEventListener\("offline"/g,
+        'platform_1.isBrowser&&_safeAddEventListener(window,"offline"'
     );
 
     fs.writeFileSync(bundlePath, code);

@@ -80,6 +80,7 @@ function handleTelegramSignIn(action) {
         sendTelegramStatus();
     }).catch(function(err) {
         console.error('[index] Failed to sign in: ' + err.message);
+        console.error('[index] Sign in error stack: ' + (err.stack || 'no stack'));
     });
 }
 
