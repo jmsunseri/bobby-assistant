@@ -181,6 +181,12 @@ if (typeof window !== 'undefined' && typeof window.crypto === 'undefined') windo
 function _safeAddEventListener(target, type, listener, options) {
     try { target.addEventListener(type, listener, options); } catch(e) {}
 }
+// Check for Response API availability (used by WebSocket onmessage handler)
+if (typeof Response === 'undefined') {
+    console.log('[bundle] Response API not available - WebSocket data processing will fail');
+} else {
+    console.log('[bundle] Response API available');
+}
 
 `;
 
@@ -302,6 +308,19 @@ if (typeof Telegram !== 'undefined') {
     code = code.replace(
         /_this33\.client\.onclose=function\(\)\{_this33\.resolveRead&&_this33\.resolveRead\(!1\),_this33\.closed=!0/,
         '_this33.client.onclose=function(){console.log("[ws] onclose fired, readyState: "+(_this33.client?_this33.client.readyState:"no-client"));_this33.resolveRead&&_this33.resolveRead(!1),_this33.closed=!0'
+    );
+
+    // Log WebSocket onmessage and check for Response API availability
+    // The receive() handler uses `new Response(message.data).arrayBuffer()` which
+    // may not exist on Pebble, causing silent data loss after connection opens
+    code = code.replace(
+        /function _callee54\(message\)\{var release4,data,_t96;/,
+        'function _callee54(message){console.log("[ws] onmessage: typeof message: "+typeof message+", has data: "+(message&&typeof message.data!=="undefined")+", typeof Response: "+(typeof Response));var release4,data,_t96;'
+    );
+    // Log after Response.arrayBuffer() call to see if it succeeds
+    code = code.replace(
+        /return new Response\(message\.data\)\.arrayBuffer\(\);case 3:data=_t96\.from\.call\(_t96,_context54\.v\);_this34\.stream=Buffer2\.concat/,
+        'console.log("[ws] calling Response.arrayBuffer(), typeof Response: "+(typeof Response));return new Response(message.data).arrayBuffer();case 3:data=_t96.from.call(_t96,_context54.v);console.log("[ws] data converted, length: "+(data?data.length:"null"));_this34.stream=Buffer2.concat'
     );
 
     fs.writeFileSync(bundlePath, code);
