@@ -87,12 +87,15 @@ module.exports = function(minified) {
         var session = loadSession();
         var authState = getAuthState();
         var rawAuthState = localStorage.getItem(AUTH_STATE_KEY);
+        var allKeys = [];
+        try { for (var i = 0; i < localStorage.length; i++) { allKeys.push(localStorage.key(i)); } } catch(e) {}
 
         console.log('[config] updateUI: session=' + (session ? 'present' : 'none') +
             ', waitingForCode=' + !!authState.waitingForCode +
             ', needs2FA=' + !!authState.needs2FA +
             ', AUTH_STATE_KEY=' + AUTH_STATE_KEY +
-            ', raw localStorage value=' + (rawAuthState ? rawAuthState.substring(0, 100) : 'null'));
+            ', raw localStorage=' + (rawAuthState ? rawAuthState.substring(0, 100) : 'null') +
+            ', all keys: ' + allKeys.join(', '));
 
         if (pendingActionInput) { pendingActionInput.hide(); }
 
@@ -112,9 +115,8 @@ module.exports = function(minified) {
             if (disconnectBtn) disconnectBtn.hide();
             if (botInput) botInput.show();
         } else {
-            var authInfo = authState.waitingForCode ? ' (code sent, waiting for entry)' :
-                           authState.error ? ' (error: ' + authState.error + ')' : '';
-            setStatus('Not connected. Enter your phone number and save to send a verification code.' + authInfo);
+            var debugInfo = ' [DEBUG: keys=' + allKeys.join(',') + ' raw=' + (rawAuthState || 'null') + ']';
+            setStatus('Not connected.' + debugInfo);
             console.log('[config] UI state: not connected');
             if (phoneInput) {
                 phoneInput.show();
