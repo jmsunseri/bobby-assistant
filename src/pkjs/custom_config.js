@@ -18,12 +18,10 @@ module.exports = function(minified) {
     var clayConfig = this;
 
     var telegramStatusText, phoneInput, codeInput, botInput;
-    var haveCodeBtn, resendCodeBtn, disconnectBtn, pendingActionInput;
+    var disconnectBtn, pendingActionInput;
 
     var SESSION_KEY = 'telegram_session';
     var BOT_USERNAME_KEY = 'openclaw_bot_username';
-
-    var showingCodeEntry = false;
 
     function setStatus(text, isError) {
         if (telegramStatusText) {
@@ -70,18 +68,10 @@ module.exports = function(minified) {
         }
     }
 
-    function showCodeEntry() {
-        showingCodeEntry = true;
-        setStatus('Enter the verification code sent to your phone, then press Save.');
-        if (phoneInput) phoneInput.hide();
-        if (codeInput) codeInput.show();
-        if (haveCodeBtn) haveCodeBtn.hide();
-        if (resendCodeBtn) resendCodeBtn.show();
-        if (disconnectBtn) disconnectBtn.hide();
-        if (botInput) botInput.hide();
-        if (codeInput) {
-            try { codeInput.$element[0].querySelector('input').focus(); } catch (e) {}
-        }
+    function normalizePhone(phone) {
+        phone = phone.replace(/[\s\-\(\)]/g, '');
+        if (!phone.startsWith('+')) { phone = '+' + phone; }
+        return phone;
     }
 
     function updateUI() {
@@ -90,29 +80,21 @@ module.exports = function(minified) {
         var session = loadSession();
         if (session) {
             setStatus('Connected (' + getBotUsername() + ')');
-            if (phoneInput) phoneInput.hide();
-            if (codeInput) codeInput.hide();
-            if (haveCodeBtn) haveCodeBtn.hide();
-            if (resendCodeBtn) resendCodeBtn.hide();
             if (disconnectBtn) disconnectBtn.show();
-            if (botInput) botInput.show();
-        } else if (showingCodeEntry) {
-            showCodeEntry();
         } else {
-            setStatus('Not connected. Enter your phone number and save to send a verification code.');
-            if (phoneInput) phoneInput.show();
-            if (codeInput) codeInput.hide();
-            if (haveCodeBtn) haveCodeBtn.show();
-            if (resendCodeBtn) resendCodeBtn.hide();
+            setStatus('Not connected');
             if (disconnectBtn) disconnectBtn.hide();
-            if (botInput) botInput.show();
         }
     }
 
-    function normalizePhone(phone) {
-        phone = phone.replace(/[\s\-\(\)]/g, '');
-        if (!phone.startsWith('+')) { phone = '+' + phone; }
-        return phone;
+    function updatePendingAction() {
+        var code = codeInput ? codeInput.get() : '';
+        var phone = phoneInput ? phoneInput.get() : '';
+        if (code) {
+            setPendingAction({ action: 'sign_in', code: code });
+        } else if (phone) {
+            setPendingAction({ action: 'send_code', phoneNumber: normalizePhone(phone) });
+        }
     }
 
     clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function() {
@@ -120,38 +102,15 @@ module.exports = function(minified) {
         phoneInput = clayConfig.getItemByMessageKey('TELEGRAM_PHONE');
         codeInput = clayConfig.getItemByMessageKey('TELEGRAM_CODE');
         botInput = clayConfig.getItemByMessageKey('OPENCLAW_BOT');
-        haveCodeBtn = clayConfig.getItemByMessageKey('TELEGRAM_HAVE_CODE');
-        resendCodeBtn = clayConfig.getItemByMessageKey('TELEGRAM_SEND_CODE');
         disconnectBtn = clayConfig.getItemByMessageKey('TELEGRAM_DISCONNECT');
         pendingActionInput = clayConfig.getItemByMessageKey('TELEGRAM_PENDING_ACTION');
 
         updateUI();
 
-        if (haveCodeBtn) {
-            haveCodeBtn.on('click', function() {
-                console.log('[config] "I have a code" clicked — showing code entry');
-                showCodeEntry();
-            });
-        }
-
-        if (resendCodeBtn) {
-            resendCodeBtn.on('click', function() {
-                var phone = phoneInput ? phoneInput.get() : '';
-                console.log('[config] Resend code clicked, phone: ' + (phone ? '****' + phone.slice(-4) : '(empty)'));
-                if (!phone) {
-                    setStatus('No phone number on file. Go back and enter one.', true);
-                    return;
-                }
-                setPendingAction({ action: 'send_code', phoneNumber: normalizePhone(phone) });
-                setStatus('Save to resend the verification code.');
-            });
-        }
-
         if (disconnectBtn) {
             disconnectBtn.on('click', function() {
                 console.log('[config] Disconnect button clicked');
                 clearSession();
-                showingCodeEntry = false;
                 setPendingAction({ action: 'disconnect' });
                 updateUI();
             });
@@ -164,12 +123,15 @@ module.exports = function(minified) {
             });
         }
 
+        if (phoneInput) {
+            phoneInput.on('change', function() {
+                updatePendingAction();
+            });
+        }
+
         if (codeInput) {
             codeInput.on('change', function() {
-                var code = codeInput.get();
-                if (code) {
-                    setPendingAction({ action: 'sign_in', code: code });
-                }
+                updatePendingAction();
             });
         }
     });

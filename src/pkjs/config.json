@@ -150,7 +150,7 @@
                 "type": "text",
                 "id": "telegramInstructions",
                 "label": "",
-                "defaultValue": "Connect directly to OpenClaw via Telegram. In OpenClaw, enable the 'llm-task' plugin and create a skill named 'llm-task' for tools (timers, alarms, etc.) to work."
+                "defaultValue": "Enter your phone number and save to send a verification code. Then enter the code and save again to sign in."
             },
             {
                 "type": "input",
@@ -174,20 +174,8 @@
                 "id": "telegramCode",
                 "messageKey": "TELEGRAM_CODE",
                 "label": "Verification Code",
-                "description": "Enter the code sent to your Telegram app",
+                "description": "Leave empty to send a new code. Enter the code to sign in.",
                 "defaultValue": ""
-            },
-            {
-                "type": "button",
-                "id": "haveCodeBtn",
-                "messageKey": "TELEGRAM_HAVE_CODE",
-                "defaultValue": "I have a code"
-            },
-            {
-                "type": "button",
-                "id": "resendCodeBtn",
-                "messageKey": "TELEGRAM_SEND_CODE",
-                "defaultValue": "Resend Code"
             },
             {
                 "type": "button",
