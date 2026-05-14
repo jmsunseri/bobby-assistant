@@ -181,11 +181,18 @@ if (typeof window !== 'undefined' && typeof window.crypto === 'undefined') windo
 function _safeAddEventListener(target, type, listener, options) {
     try { target.addEventListener(type, listener, options); } catch(e) {}
 }
-// Check for Response API availability (used by WebSocket onmessage handler)
-if (typeof Response === 'undefined') {
-    console.log('[bundle] Response API not available - WebSocket data processing will fail');
-} else {
-    console.log('[bundle] Response API available');
+// Polyfill Response.arrayBuffer() for WebSocket message data on runtimes without Response API
+// Pebble's JS runtime has WebSocket but no Response, so onmessage data can't be processed
+function _toArrayBlob(data) {
+    if (typeof Response !== 'undefined') return new Response(data).arrayBuffer();
+    if (data instanceof ArrayBuffer) return Promise.resolve(data);
+    if (data instanceof Blob) return data.arrayBuffer ? data.arrayBuffer() : new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function() { resolve(reader.result); };
+        reader.onerror = function() { reject(reader.error); };
+        reader.readAsArrayBuffer(data);
+    });
+    return Promise.resolve(new Uint8Array(data).buffer);
 }
 
 `;
@@ -317,10 +324,10 @@ if (typeof Telegram !== 'undefined') {
         /function _callee54\(message\)\{var release4,data,_t96;/,
         'function _callee54(message){console.log("[ws] onmessage: typeof message: "+typeof message+", has data: "+(message&&typeof message.data!=="undefined")+", typeof Response: "+(typeof Response));var release4,data,_t96;'
     );
-    // Log after Response.arrayBuffer() call to see if it succeeds
+    // Replace Response.arrayBuffer() with _toArrayBlob polyfill for Pebble compatibility
     code = code.replace(
-        /return new Response\(message\.data\)\.arrayBuffer\(\);case 3:data=_t96\.from\.call\(_t96,_context54\.v\);_this34\.stream=Buffer2\.concat/,
-        'console.log("[ws] calling Response.arrayBuffer(), typeof Response: "+(typeof Response));return new Response(message.data).arrayBuffer();case 3:data=_t96.from.call(_t96,_context54.v);console.log("[ws] data converted, length: "+(data?data.length:"null"));_this34.stream=Buffer2.concat'
+        /return new Response\(message\.data\)\.arrayBuffer\(\)/g,
+        'return _toArrayBlob(message.data)'
     );
 
     fs.writeFileSync(bundlePath, code);
