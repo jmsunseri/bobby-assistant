@@ -295,35 +295,27 @@ if (typeof Telegram !== 'undefined') {
         'platform_1.isBrowser&&_safeAddEventListener(window,"offline"'
     );
 
-    // Add WebSocket debug logging in PromisedWebSockets.connect()
-    // Log WebSocket creation and all events to diagnose Pebble connection hangs
+    // Add WebSocket debug logging for key events (creation, error, close)
     code = code.replace(
         /this\.website=this\.getWebSocketLink\(ip,port,testServers\),this\.client=new websocket_1\.w3cwebsocket\(this\.website,"binary"\),new Promise\(function\(resolve2,reject\)\{_this33\.client&&\(_this33\.client\.onopen/,
-        'this.website=this.getWebSocketLink(ip,port,testServers),console.log("[ws] Creating WebSocket to: "+this.website),this.client=new websocket_1.w3cwebsocket(this.website,"binary"),console.log("[ws] WebSocket created, readyState: "+(this.client?this.client.readyState:"null-client")),console.log("[ws] WebSocket type: "+typeof this.client+", constructor: "+(this.client&&this.client.constructor?this.client.constructor.name:"unknown")),new Promise(function(resolve2,reject){_this33.client&&(_this33.client.onopen'
+        'this.website=this.getWebSocketLink(ip,port,testServers),console.log("[ws] Connecting to: "+this.website),this.client=new websocket_1.w3cwebsocket(this.website,"binary"),new Promise(function(resolve2,reject){_this33.client&&(_this33.client.onopen'
     );
     // Log onopen event
     code = code.replace(
         /_this33\.client\.onopen=function\(\)\{_this33\.receive\(\),resolve2\(_this33\)/,
-        '_this33.client.onopen=function(){console.log("[ws] onopen fired, readyState: "+_this33.client.readyState);_this33.receive(),resolve2(_this33)'
+        '_this33.client.onopen=function(){console.log("[ws] Connected");_this33.receive(),resolve2(_this33)'
     );
     // Log onerror event
     code = code.replace(
         /_this33\.client\.onerror=function\(error\)\{reject\(error\)/,
-        '_this33.client.onerror=function(error){console.log("[ws] onerror fired, readyState: "+(_this33.client?_this33.client.readyState:"no-client")+", typeof error: "+typeof error);reject(error)'
+        '_this33.client.onerror=function(error){console.log("[ws] Error, readyState: "+(_this33.client?_this33.client.readyState:"no-client"));reject(error)'
     );
     // Log onclose event
     code = code.replace(
         /_this33\.client\.onclose=function\(\)\{_this33\.resolveRead&&_this33\.resolveRead\(!1\),_this33\.closed=!0/,
-        '_this33.client.onclose=function(){console.log("[ws] onclose fired, readyState: "+(_this33.client?_this33.client.readyState:"no-client"));_this33.resolveRead&&_this33.resolveRead(!1),_this33.closed=!0'
+        '_this33.client.onclose=function(){console.log("[ws] Closed");_this33.resolveRead&&_this33.resolveRead(!1),_this33.closed=!0'
     );
 
-    // Log WebSocket onmessage and check for Response API availability
-    // The receive() handler uses `new Response(message.data).arrayBuffer()` which
-    // may not exist on Pebble, causing silent data loss after connection opens
-    code = code.replace(
-        /function _callee54\(message\)\{var release4,data,_t96;/,
-        'function _callee54(message){console.log("[ws] onmessage: typeof message: "+typeof message+", has data: "+(message&&typeof message.data!=="undefined")+", typeof Response: "+(typeof Response));var release4,data,_t96;'
-    );
     // Replace Response.arrayBuffer() with _toArrayBlob polyfill for Pebble compatibility
     code = code.replace(
         /return new Response\(message\.data\)\.arrayBuffer\(\)/g,

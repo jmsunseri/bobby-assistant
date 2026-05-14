@@ -86,11 +86,13 @@ module.exports = function(minified) {
     function updateUI() {
         var session = loadSession();
         var authState = getAuthState();
+        var rawAuthState = localStorage.getItem(AUTH_STATE_KEY);
 
         console.log('[config] updateUI: session=' + (session ? 'present' : 'none') +
             ', waitingForCode=' + !!authState.waitingForCode +
             ', needs2FA=' + !!authState.needs2FA +
-            ', raw auth state: ' + JSON.stringify(authState));
+            ', AUTH_STATE_KEY=' + AUTH_STATE_KEY +
+            ', raw localStorage value=' + (rawAuthState ? rawAuthState.substring(0, 100) : 'null'));
 
         if (pendingActionInput) { pendingActionInput.hide(); }
 
@@ -110,7 +112,9 @@ module.exports = function(minified) {
             if (disconnectBtn) disconnectBtn.hide();
             if (botInput) botInput.show();
         } else {
-            setStatus('Not connected. Enter your phone number and save to send a verification code.');
+            var authInfo = authState.waitingForCode ? ' (code sent, waiting for entry)' :
+                           authState.error ? ' (error: ' + authState.error + ')' : '';
+            setStatus('Not connected. Enter your phone number and save to send a verification code.' + authInfo);
             console.log('[config] UI state: not connected');
             if (phoneInput) {
                 phoneInput.show();
