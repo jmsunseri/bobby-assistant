@@ -33,7 +33,12 @@ var currentUser = null;
  * @returns {Promise<boolean>} True if successfully initialized
  */
 function initClient() {
-    console.log('[client] initClient called');
+    console.log('[client] initClient called, client: ' + (client ? (client.connected ? 'connected' : 'disconnected') : 'null'));
+    if (client && client.connected) {
+        console.log('[client] Reusing existing connected client');
+        return Promise.resolve(true);
+    }
+
     return new Promise(function(resolve, reject) {
         try {
             var storedSession = session.loadSession();
