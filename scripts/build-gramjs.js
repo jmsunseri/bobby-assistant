@@ -330,6 +330,28 @@ if (typeof Telegram !== 'undefined') {
         'return _toArrayBlob(message.data)'
     );
 
+    // Patch require_crypto2: replace self.crypto.subtle with globalThis.crypto.subtle
+    // Pebble's JS runtime doesn't define 'self', causing 'ReferenceError: self is not defined'
+    code = code.replace(
+        /self\.crypto\.subtle\.digest/g,
+        'globalThis.crypto.subtle.digest'
+    );
+    // Also replace bare 'crypto.' references within require_crypto2 with 'globalThis.crypto.'
+    // This covers crypto.subtle.importKey, crypto.subtle.deriveBits, crypto.getRandomValues
+    // But only within the crypto2 module, not the global banner polyfill
+    code = code.replace(
+        /return crypto\.subtle\.importKey\("raw",password,/g,
+        'return globalThis.crypto.subtle.importKey("raw",password,'
+    );
+    code = code.replace(
+        /return crypto\.subtle\.deriveBits\(\{/g,
+        'return globalThis.crypto.subtle.deriveBits({'
+    );
+    code = code.replace(
+        /crypto\.getRandomValues\(bytes\)/g,
+        'globalThis.crypto.getRandomValues(bytes)'
+    );
+
     fs.writeFileSync(bundlePath, code);
     console.log('Patched crypto polyfill');
 
