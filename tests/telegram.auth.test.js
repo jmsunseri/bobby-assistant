@@ -32,15 +32,21 @@ describe('Telegram auth module (without real API)', () => {
         auth = require('../src/pkjs/telegram/auth.js');
     });
 
-    it('should reject signIn when no sendCode was called first', async () => {
-        const telegram = require('../src/pkjs/telegram/index.js');
-        // Reset auth state by requiring fresh module
-        await expect(telegram.signIn('12345')).rejects.toThrow('No pending authentication');
+    it('should return getAuthState with no pending requests initially', () => {
+        const state = auth.getAuthState();
+        expect(state.isWaitingForCode).toBe(false);
+        expect(state.isWaitingForPassword).toBe(false);
+        expect(state.isAuthInProgress).toBeFalsy();
+    });
+
+    it('should return false from provideCode when no auth in progress', () => {
+        const result = auth.provideCode('12345');
+        expect(result).toBe(false);
     });
 });
 
 describe('Telegram auth with real API', () => {
-    it('should send a verification code to a real phone number', async () => {
+    it('should connect, start auth, and reach phoneCode callback', async () => {
         const phone = process.env.TELEGRAM_PHONE;
         if (!phone || phone === '+15551234567') {
             throw new Error('Set your real TELEGRAM_PHONE in .env');
@@ -55,11 +61,29 @@ describe('Telegram auth with real API', () => {
         const connected = await client.initClient();
         expect(connected).toBe(true);
 
-        const result = await auth.sendCode(phone);
-        expect(result.success).toBe(true);
-        expect(result.status).toBe('code_sent');
+        // startAuth will block on the phoneCode callback until provideCode() is called
+        const startAuthPromise = auth.startAuth(phone);
 
-        // phoneCodeHash is stored internally in authState, not returned
-        console.log('sendCode succeeded. Not attempting signIn (requires real code).');
+        // Wait for DC migration + code sending + phoneCode callback
+        await new Promise(resolve => setTimeout(resolve, 10000));
+
+        // After the phoneCode callback fires, isWaitingForCode should be true
+        const state = auth.getAuthState();
+        expect(state.isWaitingForCode).toBe(true);
+        expect(state.isAuthInProgress).toBeTruthy();
+
+        // Cancel: reject the code promise so client.start() can finish
+        // This triggers onError which cleans up state
+        auth.provideCode('00000'); // invalid code to trigger error and end the flow
+
+        // Give it time to process the error
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // Disconnect the client
+        try {
+            await client.disconnect();
+        } catch (e) {
+            // May already be disconnected
+        }
     }, 60000);
 });

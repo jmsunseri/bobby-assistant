@@ -33,9 +33,9 @@ module.exports = {
     getClient: client.getClient,
 
     // Auth
-    sendCode: auth.sendCode,
-    signIn: auth.signIn,
-    signInWithPassword: auth.signInWithPassword,
+    startAuth: auth.startAuth,
+    provideCode: auth.provideCode,
+    providePassword: auth.providePassword,
     checkConnection: auth.checkConnection,
     logout: auth.logout,
     getAuthState: auth.getAuthState,

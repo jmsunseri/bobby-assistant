@@ -3,15 +3,6 @@ var loaded = false;
 function ensureTelegramBundle() {
     if (!loaded) {
         console.log('[bundle] Loading Telegram bundle...');
-        if (typeof window === 'undefined') {
-            console.log('[bundle] No global window, creating minimal polyfill');
-            global.window = { location: { protocol: 'https:' } };
-        } else {
-            if (!window.location) {
-                console.log('[bundle] No window.location, polyfilling');
-                window.location = { protocol: 'https:' };
-            }
-        }
         try {
             require('./telegram-bundle.js');
             loaded = true;

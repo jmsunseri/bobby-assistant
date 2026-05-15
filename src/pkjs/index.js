@@ -44,26 +44,33 @@ function sendTelegramStatus() {
     });
 }
 
-function handleTelegramSendCode(action) {
-    console.log('[index] Sending verification code to: ' + action.phoneNumber);
-    telegram.sendCode(action.phoneNumber).then(function(result) {
-        console.log('[index] Code sent result: ' + JSON.stringify(result));
+function handleTelegramStartAuth(action) {
+    console.log('[index] Starting Telegram auth for: ' + action.phoneNumber);
+    telegram.startAuth(action.phoneNumber).then(function(result) {
+        console.log('[index] Auth result: ' + JSON.stringify(result));
         sendTelegramStatus();
     }).catch(function(err) {
-        console.error('[index] Failed to send code: ' + err.message);
+        console.error('[index] Auth failed: ' + err.message);
+        console.error('[index] Auth error stack: ' + (err.stack || 'no stack'));
         sendTelegramStatus();
     });
 }
 
-function handleTelegramSignIn(action) {
-    console.log('[index] Signing in with code');
-    telegram.signIn(action.code).then(function(result) {
-        console.log('[index] Sign in result: ' + JSON.stringify(result));
+function handleTelegramProvideCode(action) {
+    console.log('[index] Providing verification code');
+    var accepted = telegram.provideCode(action.code);
+    if (!accepted) {
+        console.error('[index] No pending code request — start auth first');
         sendTelegramStatus();
-    }).catch(function(err) {
-        console.error('[index] Failed to sign in: ' + err.message);
-        console.error('[index] Sign in error stack: ' + (err.stack || 'no stack'));
-    });
+    }
+}
+
+function handleTelegramProvidePassword(action) {
+    console.log('[index] Providing 2FA password');
+    var accepted = telegram.providePassword(action.password);
+    if (!accepted) {
+        console.error('[index] No pending password request');
+    }
 }
 
 function handleTelegramDisconnect() {
@@ -77,10 +84,12 @@ function handleTelegramDisconnect() {
 }
 
 function handleTelegramAction(action) {
-    if (action.action === 'send_code' && action.phoneNumber) {
-        handleTelegramSendCode(action);
-    } else if (action.action === 'sign_in' && action.code) {
-        handleTelegramSignIn(action);
+    if (action.action === 'start_auth' && action.phoneNumber) {
+        handleTelegramStartAuth(action);
+    } else if (action.action === 'provide_code' && action.code) {
+        handleTelegramProvideCode(action);
+    } else if (action.action === 'provide_password' && action.password) {
+        handleTelegramProvidePassword(action);
     } else if (action.action === 'disconnect') {
         handleTelegramDisconnect();
     } else {
@@ -166,6 +175,7 @@ exports.updateTelegramStatus = function() {
 // Export message handler for testing
 exports.handleAppMessage = handleAppMessage;
 exports.handleTelegramAction = handleTelegramAction;
-exports.handleTelegramSendCode = handleTelegramSendCode;
-exports.handleTelegramSignIn = handleTelegramSignIn;
+exports.handleTelegramStartAuth = handleTelegramStartAuth;
+exports.handleTelegramProvideCode = handleTelegramProvideCode;
+exports.handleTelegramProvidePassword = handleTelegramProvidePassword;
 exports.handleTelegramDisconnect = handleTelegramDisconnect;
