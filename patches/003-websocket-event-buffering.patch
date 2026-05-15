@@ -1,0 +1,181 @@
+Patch 3: WebSocket event buffering wrapper
+==========================================
+
+Add a WebSocket wrapper to bundle_loader.js that buffers events when
+no handler is set yet. Pebble's PKJS runtime can fire WebSocket.onopen
+before GramJS assigns the onopen handler, causing silent connection
+failures.
+
+File: src/pkjs/lib/bundle_loader.js
+--------------------------------------
+
+After the navigator and self polyfills (patches 1 & 2) and BEFORE the
+try block that loads the telegram bundle, insert the following code:
+
+// WebSocket wrapper that buffers events until handlers are assigned
+// Pebble PKJS can fire onopen before GramJS sets onopen/onmessage/etc.
+// This wrapper intercepts the real WebSocket and buffers events so they
+// aren't lost when handlers are assigned late.
+(function() {
+    if (typeof WebSocket === 'undefined') return;
+    if (WebSocket.__clawdWrapped) return;
+
+    var OrigWS = WebSocket;
+
+    function ClawdWebSocket(url, protocols) {
+        var ws = protocols ? new OrigWS(url, protocols) : new OrigWS(url);
+        var pending = [];
+        var handlers = {};
+
+        function makeEvent(type, data) {
+            if (typeof Event === 'function') return new Event(type);
+            var evt = { type: type };
+            if (type === 'message' && data) {
+                evt.data = data;
+            }
+            return evt;
+        }
+
+        function flush(type) {
+            if (!handlers[type] || pending.length === 0) return;
+            var toFlush = pending.splice(0);
+            for (var i = 0; i < toFlush.length; i++) {
+                if (toFlush[i][0] === type) {
+                    handlers[type](toFlush[i][1]);
+                }
+            }
+        }
+
+        // Set up native event handlers that buffer events
+        ws.onopen = function(e) {
+            pending.push(['open', e || makeEvent('open')]);
+            flush('open');
+        };
+        ws.onmessage = function(e) {
+            pending.push(['message', e]);
+            flush('message');
+        };
+        ws.onerror = function(e) {
+            pending.push(['error', e || makeEvent('error')]);
+            flush('error');
+        };
+        ws.onclose = function(e) {
+            pending.push(['close', e || makeEvent('close')]);
+            flush('close');
+        };
+
+        // Intercept handler assignments via Object.defineProperty
+        ['open', 'message', 'error', 'close'].forEach(function(type) {
+            Object.defineProperty(ws, 'on' + type, {
+                get: function() { return handlers[type] || null; },
+                set: function(fn) {
+                    handlers[type] = fn;
+                    flush(type);
+                },
+                configurable: true,
+                enumerable: true
+            });
+        });
+
+        // Proxy read-only state properties
+        Object.defineProperty(ws, 'readyState', {
+            get: function() { return ws.readyState; },
+            enumerable: true
+        });
+        Object.defineProperty(ws, 'bufferedAmount', {
+            get: function() { return ws.bufferedAmount; },
+            enumerable: true
+        });
+        Object.defineProperty(ws, 'url', {
+            get: function() { return ws.url; },
+            enumerable: true
+        });
+
+        // binaryType passthrough
+        Object.defineProperty(ws, 'binaryType', {
+            get: function() { return ws.binaryType; },
+            set: function(v) { ws.binaryType = v; },
+            enumerable: true
+        });
+
+        // Proxy methods
+        ws.send = function(data) { return ws.send(data); };
+        ws.close = function(code, reason) { return ws.close(code, reason); };
+
+        // Protocol and extensions passthrough
+        Object.defineProperty(ws, 'protocol', {
+            get: function() { return ws.protocol; },
+            enumerable: true
+        });
+        Object.defineProperty(ws, 'extensions', {
+            get: function() { return ws.extensions; },
+            enumerable: true
+        });
+
+        return ws;
+    }
+
+    // Copy static constants
+    ClawdWebSocket.CONNECTING = 0;
+    ClawdWebSocket.OPEN = 1;
+    ClawdWebSocket.CLOSING = 2;
+    ClawdWebSocket.CLOSED = 3;
+    if (OrigWS.CONNECTING !== undefined) ClawdWebSocket.CONNECTING = OrigWS.CONNECTING;
+    if (OrigWS.OPEN !== undefined) ClawdWebSocket.OPEN = OrigWS.OPEN;
+    if (OrigWS.CLOSING !== undefined) ClawdWebSocket.CLOSING = OrigWS.CLOSING;
+    if (OrigWS.CLOSED !== undefined) ClawdWebSocket.CLOSED = OrigWS.CLOSED;
+
+    ClawdWebSocket.__clawdWrapped = true;
+
+    globalThis.WebSocket = ClawdWebSocket;
+    if (typeof window !== 'undefined') window.WebSocket = ClawdWebSocket;
+    if (typeof MozWebSocket !== 'undefined') {
+        globalThis.MozWebSocket = ClawdWebSocket;
+    }
+})();
+
+How it works:
+-------------
+
+1. When `new ClawdWebSocket(url, protocols)` is called, it creates the
+   real `OrigWS` WebSocket instance immediately AND assigns its own
+   onopen/onmessage/onerror/onclose handlers.
+
+2. If an event fires before GramJS sets onopen/onmessage/etc., the
+   native handler (step 1) buffers it in the `pending` array.
+
+3. When GramJS assigns e.g. `ws.onopen = function() {...}`, the
+   Object.defineProperty setter fires, stores the handler, and
+   immediately calls flush() to replay any buffered events.
+
+4. Method calls (send, close) and property reads (readyState, url, etc.)
+   are proxied through to the real WebSocket.
+
+Edge cases:
+-----------
+
+- If the connection opens AND onopen fires AND the event gets buffered,
+  then GramJS assigns onopen → flush replays the open event. This is
+  equivalent to onopen firing right after assignment.
+- If the connection has already opened and onopen was NOT captured
+  (e.g., the wrapper wasn't in place), this wrapper can't help. But
+  since we install it BEFORE the bundle loads, this shouldn't happen.
+- The `ClawdWebSocket.__clawdWrapped` flag prevents double-wrapping.
+
+Verification:
+- Build with `pebble build` — should compile without errors
+- Watch for "[ws] Connected" log — should appear reliably
+- If WebSocket was previously failing silently (no onopen), this should
+  fix it and allow GramJS to proceed with the DH handshake
+
+Note on the W3CWebSocket adapter:
+  GramJS uses the `websocket` npm package's browser adapter
+  (require_browser at line 449), which does:
+    var NativeWebSocket = _globalThis.WebSocket || _globalThis.MozWebSocket;
+    function W3CWebSocket(uri, protocols) {
+      var native_instance = new NativeWebSocket(uri, protocols);
+      return native_instance;
+    }
+  Since we replace globalThis.WebSocket BEFORE the bundle loads,
+  NativeWebSocket === ClawdWebSocket, and `new ClawdWebSocket(url)`
+  returns the real WebSocket with buffered event handling.

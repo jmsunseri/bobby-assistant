@@ -1,0 +1,116 @@
+Patch 2: self=globalThis polyfill + revert bundle string patches
+=================================================================
+
+Part A: Add self=globalThis polyfill to bundle_loader.js
+Part B: Revert 4 string replacements in telegram-bundle.js
+Part C: Remove 4 .replace() calls from build-gramjs.js
+
+Problem
+-------
+We patched individual 'self.crypto.subtle' and 'crypto.*' references in the
+bundle with fragile string replacements via build-gramjs.js. A single polyfill
+line (self = globalThis) is simpler and more robust. With self === globalThis,
+the original GramJS code works unmodified because:
+- 'self.crypto' resolves to globalThis.crypto (set by banner polyfill line 116)
+- 'crypto' resolves via global scope to window.crypto (set by banner line 118)
+
+Part A: src/pkjs/lib/bundle_loader.js
+--------------------------------------
+
+After the window.location polyfill block and BEFORE the try block that
+loads the telegram bundle, insert:
+
+    // Polyfill self for GramJS crypto module
+    // GramJS's require_crypto2 uses bare 'self.crypto.subtle' and 'crypto.*'
+    // Pebble's JS runtime has no 'self' global, causing ReferenceError
+    if (typeof self === 'undefined') {
+        globalThis.self = globalThis;
+    }
+
+This must come AFTER the navigator polyfill (patch 1) but BEFORE the
+require('./telegram-bundle.js') call.
+
+Part B: src/pkjs/lib/telegram-bundle.js
+----------------------------------------
+
+Revert the 4 string replacements that build-gramjs.js applied in the
+require_crypto2 module (line 1556). These are no longer needed because
+self === globalThis after the polyfill, and crypto resolves to
+window.crypto which is set by the banner polyfill.
+
+1. Replace: globalThis.crypto.getRandomValues(bytes)
+   With:     crypto.getRandomValues(bytes)
+   Context:  "}var bytes=new Uint8Array(count);globalThis.crypto.getRandomValues(bytes);return Buffer2.from(bytes);}var Hash"
+   → Change "globalThis.crypto.getRandomValues(bytes)" to "crypto.getRandomValues(bytes)"
+
+2. Replace: globalThis.crypto.subtle.digest("SHA-1"
+   With:     self.crypto.subtle.digest("SHA-1"
+   Context:  "return globalThis.crypto.subtle.digest("SHA-1",this.data)"
+   → Change "globalThis.crypto.subtle.digest("SHA-1"" to "self.crypto.subtle.digest("SHA-1""
+
+3. Replace: globalThis.crypto.subtle.digest("SHA-256"
+   With:     self.crypto.subtle.digest("SHA-256"
+   Context:  "return globalThis.crypto.subtle.digest("SHA-256",this.data)"
+   → Change "globalThis.crypto.subtle.digest("SHA-256"" to "self.crypto.subtle.digest("SHA-256""
+
+4. Replace: globalThis.crypto.subtle.importKey("raw"
+   With:     crypto.subtle.importKey("raw"
+   Context:  "return globalThis.crypto.subtle.importKey("raw",password"
+   → Change "globalThis.crypto.subtle.importKey("raw"" to "crypto.subtle.importKey("raw""
+
+5. Replace: globalThis.crypto.subtle.deriveBits({name:"PBKDF2"
+   With:     crypto.subtle.deriveBits({name:"PBKDF2"
+   Context:  "return globalThis.crypto.subtle.deriveBits({name:"PBKDF2""
+   → Change "globalThis.crypto.subtle.deriveBits({name:"PBKDF2"" to "crypto.subtle.deriveBits({name:"PBKDF2""
+
+NOTE: There are 5 revert changes (not 4) because build-gramjs.js replaced
+self.crypto.subtle.digest with globalThis.crypto.subtle.digest, which
+appears twice (SHA-1 and SHA-256). Both must be reverted.
+
+Part C: scripts/build-gramjs.js
+-------------------------------
+
+Remove the 4 .replace() call blocks at lines 329-348 that perform these
+string replacements. They are no longer needed since the self=globalThis
+polyfill makes them redundant, and we don't want future rebuilds to
+re-apply them.
+
+Specific lines to remove:
+
+1. Lines 329-332 (self.crypto.subtle.digest → globalThis.crypto.subtle.digest):
+    code = code.replace(
+        /self\.crypto\.subtle\.digest/g,
+        'globalThis.crypto.subtle.digest'
+    );
+
+2. Lines 337-340 (crypto.subtle.importKey → globalThis.crypto.subtle.importKey):
+    code = code.replace(
+        /return crypto\.subtle\.importKey\("raw",password,/g,
+        'return globalThis.crypto.subtle.importKey("raw",password,'
+    );
+
+3. Lines 341-344 (crypto.subtle.deriveBits → globalThis.crypto.subtle.deriveBits):
+    code = code.replace(
+        /return crypto\.subtle\.deriveBits\(\{/g,
+        'return globalThis.crypto.subtle.deriveBits({'
+    );
+
+4. Lines 345-348 (crypto.getRandomValues → globalThis.crypto.getRandomValues):
+    code = code.replace(
+        /crypto\.getRandomValues\(bytes\)/g,
+        'globalThis.crypto.getRandomValues(bytes)'
+    );
+
+Also remove the surrounding comments at lines 328-329 and 334-336 that
+explain these patches. The comment block starting at line 328:
+    // Patch require_crypto2: replace self.crypto.subtle with globalThis.crypto.subtle
+    // Pebble's JS runtime doesn't define 'self', causing 'ReferenceError: self is not defined'
+...and the comment block starting at line 334:
+    // Also replace bare 'crypto.' references within require_crypto2 with 'globalThis.crypto.'
+    // This covers crypto.subtle.importKey, crypto.subtle.deriveBits, crypto.getRandomValues
+    // But only within the crypto2 module, not the global banner polyfill
+
+Verification:
+- Build with `pebble build` — should compile without errors
+- Check logs: no "self is not defined" or "crypto is not defined" errors
+- The crypto operations (SHA-1, SHA-256, PBKDF2, randomBytes) should still work

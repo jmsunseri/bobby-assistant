@@ -1,0 +1,24 @@
+Patch 1: navigator polyfill
+===========================
+
+Add navigator polyfill to bundle_loader.js before the Telegram bundle loads.
+GramJS checks navigator.onLine when deciding whether to reconnect.
+Pebble's JS runtime has no navigator object.
+
+File: src/pkjs/lib/bundle_loader.js
+-------------------------------------
+
+After the window.location polyfill block (line 13) and before the
+`try { require('./telegram-bundle.js');` line (line 15), insert:
+
+    // Polyfill navigator for GramJS reconnection logic
+    if (typeof navigator === 'undefined') {
+        globalThis.navigator = { onLine: true, userAgent: 'Clawd PKJS' };
+    } else if (typeof window !== 'undefined' && !window.navigator) {
+        window.navigator = globalThis.navigator;
+    }
+
+Verification:
+- Build with `pebble build` — should compile without errors
+- Check logs for any "navigator is not defined" errors
+- GramJS should believe it's always online and attempt reconnections normally
