@@ -16,23 +16,19 @@
 
 /**
  * Telegram authentication functions.
- * Uses GramJS's client.start() for the entire auth flow,
- * which handles DC migration, phoneCodeHash management,
- * 2FA, and sign-up automatically.
+ * Uses client.invoke() with auth.SendCode and auth.SignIn,
+ * matching the Pebblegram bundle's API surface.
  */
 
 var client = require('./client');
 var session = require('./session');
 
-var codeResolve = null;
-var codeReject = null;
-var passwordResolve = null;
-var passwordReject = null;
-var startAuthPromise = null;
-var lastCodeViaApp = null;
+var phoneCodeHash = null;
+var pendingPhone = null;
 
 function startAuth(phoneNumber) {
     console.log('[auth] startAuth called for phone: ' + phoneNumber);
+    pendingPhone = phoneNumber;
     return new Promise(function(resolve, reject) {
         var gramjsClient = client.getClient();
         if (!gramjsClient) {
@@ -41,87 +37,111 @@ function startAuth(phoneNumber) {
             return;
         }
 
-        if (startAuthPromise) {
-            console.log('[auth] Auth already in progress, rejecting duplicate');
-            reject(new Error('Auth already in progress. Wait for it to complete.'));
-            return;
-        }
+        var Api = (typeof TelegramApi !== 'undefined') ? TelegramApi : (gramjsClient.Api || {});
 
-        codeResolve = null;
-        codeReject = null;
-        passwordResolve = null;
-        passwordReject = null;
-
-        startAuthPromise = gramjsClient.start({
+        gramjsClient.invoke(new Api.auth.SendCode({
             phoneNumber: phoneNumber,
-            phoneCode: function(isCodeViaApp) {
-                lastCodeViaApp = isCodeViaApp;
-                console.log('[auth] phoneCode callback triggered (isCodeViaApp: ' + isCodeViaApp + '), waiting for code from watch...');
-                return new Promise(function(resolveCode, rejectCode) {
-                    codeResolve = resolveCode;
-                    codeReject = rejectCode;
-                });
-            },
-            password: function(hint) {
-                console.log('[auth] password callback triggered (hint: ' + (hint || 'none') + '), waiting for password from watch...');
-                return new Promise(function(resolvePassword, rejectPassword) {
-                    passwordResolve = resolvePassword;
-                    passwordReject = rejectPassword;
-                });
-            },
-            onError: function(err) {
-                console.error('[auth] client.start onError: ' + err.message);
-                if (codeReject) { codeReject(err); codeResolve = null; codeReject = null; }
-                if (passwordReject) { passwordReject(err); passwordResolve = null; passwordReject = null; }
+            apiId: gramjsClient.apiId,
+            apiHash: gramjsClient.apiHash,
+            settings: new Api.CodeSettings({})
+        })).then(function(result) {
+            console.log('[auth] SendCode result: phoneCodeHash=' + (result.phoneCodeHash ? 'received' : 'missing'));
+            if (!result || !result.phoneCodeHash) {
+                reject(new Error('Telegram did not return a login code hash.'));
+                return;
             }
-        }).then(function() {
-            console.log('[auth] client.start completed successfully');
-            var sessionStr = gramjsClient.session.save();
-            session.saveSession(sessionStr);
-            startAuthPromise = null;
-            codeResolve = null;
-            codeReject = null;
-            passwordResolve = null;
-            passwordReject = null;
+            phoneCodeHash = result.phoneCodeHash;
             resolve({
                 success: true,
-                status: 'signed_in'
+                status: 'code_sent'
             });
         }).catch(function(err) {
-            console.error('[auth] client.start failed: ' + err.message);
-            console.error('[auth] Error stack: ' + (err.stack || 'no stack'));
-            startAuthPromise = null;
-            codeResolve = null;
-            codeReject = null;
-            passwordResolve = null;
-            passwordReject = null;
-            reject(new Error('Auth failed: ' + err.message));
+            console.error('[auth] SendCode failed: ' + (err.message || err));
+            reject(new Error('SendCode failed: ' + (err.errorMessage || err.message)));
         });
     });
 }
 
 function provideCode(code) {
-    console.log('[auth] provideCode called (length: ' + (code ? code.length : 0) + ')');
-    if (codeResolve) {
-        codeResolve(code);
-        codeResolve = null;
-        codeReject = null;
-        return true;
-    }
-    console.error('[auth] No pending code request — call startAuth first');
-    return false;
+    console.log('[auth] provideCode called');
+    return new Promise(function(resolve, reject) {
+        var gramjsClient = client.getClient();
+        if (!gramjsClient) {
+            reject(new Error('Telegram client not initialized.'));
+            return;
+        }
+        if (!phoneCodeHash) {
+            reject(new Error('No pending code request — call startAuth first'));
+            return;
+        }
+
+        var Api = (typeof TelegramApi !== 'undefined') ? TelegramApi : (gramjsClient.Api || {});
+        var phone = pendingPhone || '';
+
+        gramjsClient.invoke(new Api.auth.SignIn({
+            phoneNumber: phone,
+            phoneCodeHash: phoneCodeHash,
+            phoneCode: code
+        })).then(function(result) {
+            console.log('[auth] SignIn successful');
+            var sessionStr = gramjsClient.session.save();
+            session.saveSession(sessionStr);
+            phoneCodeHash = null;
+            resolve({
+                success: true,
+                status: 'signed_in'
+            });
+        }).catch(function(err) {
+            var msg = err.errorMessage || err.message || '';
+            console.error('[auth] SignIn failed: ' + msg);
+            if (msg === 'SESSION_PASSWORD_NEEDED') {
+                console.log('[auth] 2FA required');
+                phoneCodeHash = null;
+                resolve({
+                    success: false,
+                    status: 'password_needed',
+                    hint: err.hint || ''
+                });
+                return;
+            }
+            phoneCodeHash = null;
+            reject(new Error('SignIn failed: ' + msg));
+        });
+    });
 }
 
 function providePassword(password) {
     console.log('[auth] providePassword called');
-    if (passwordResolve) {
-        passwordResolve(password);
-        passwordResolve = null;
-        passwordReject = null;
-        return true;
-    }
-    console.error('[auth] No pending password request');
-    return false;
+    return new Promise(function(resolve, reject) {
+        var gramjsClient = client.getClient();
+        if (!gramjsClient) {
+            reject(new Error('Telegram client not initialized.'));
+            return;
+        }
+
+        gramjsClient.signInWithPassword({
+            apiId: gramjsClient.apiId,
+            apiHash: gramjsClient.apiHash
+        }, {
+            password: function() {
+                return Promise.resolve(password);
+            },
+            onError: function(err) {
+                reject(new Error('2FA failed: ' + (err.message || err)));
+            }
+        }).then(function() {
+            console.log('[auth] 2FA successful');
+            var sessionStr = gramjsClient.session.save();
+            session.saveSession(sessionStr);
+            resolve({
+                success: true,
+                status: 'signed_in'
+            });
+        }).catch(function(err) {
+            console.error('[auth] 2FA failed: ' + (err.message || err));
+            reject(new Error('2FA failed: ' + (err.message || err)));
+        });
+    });
 }
 
 function checkConnection() {
@@ -149,11 +169,7 @@ function logout() {
     return new Promise(function(resolve, reject) {
         client.disconnect().then(function() {
             console.log('[auth] Disconnected and session cleared');
-            codeResolve = null;
-            codeReject = null;
-            passwordResolve = null;
-            passwordReject = null;
-            startAuthPromise = null;
+            phoneCodeHash = null;
             resolve();
         }).catch(function(err) {
             console.error('[auth] Logout failed: ' + (err.message || err));
@@ -164,10 +180,10 @@ function logout() {
 
 function getAuthState() {
     return {
-        isWaitingForCode: codeResolve !== null,
-        isWaitingForPassword: passwordResolve !== null,
-        isAuthInProgress: startAuthPromise !== null,
-        isCodeViaApp: lastCodeViaApp
+        isWaitingForCode: phoneCodeHash !== null,
+        isWaitingForPassword: false,
+        isAuthInProgress: phoneCodeHash !== null,
+        isCodeViaApp: false
     };
 }
 

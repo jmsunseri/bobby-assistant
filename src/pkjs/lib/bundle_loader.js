@@ -4,15 +4,24 @@ function ensureTelegramBundle() {
     if (!loaded) {
         console.log('[bundle] Loading Telegram bundle...');
         try {
-            require('./telegram-bundle.js');
+            var bundled = require('./telegram-bundle.js');
+            if (bundled && bundled.TelegramClient) {
+                (typeof window !== 'undefined' ? window : global).TelegramClient = bundled.TelegramClient;
+            }
+            if (bundled && bundled.StringSession) {
+                (typeof window !== 'undefined' ? window : global).StringSession = bundled.StringSession;
+            }
+            if (bundled && bundled.Api) {
+                (typeof window !== 'undefined' ? window : global).TelegramApi = bundled.Api;
+            }
+            if (bundled && bundled.TelegramClient && bundled.TelegramClient.events && bundled.TelegramClient.events.NewMessage) {
+                (typeof window !== 'undefined' ? window : global).NewMessage = bundled.TelegramClient.events.NewMessage;
+            }
             loaded = true;
             console.log('[bundle] Telegram bundle loaded successfully');
             console.log('[bundle] TelegramClient available: ' + (typeof TelegramClient !== 'undefined'));
             console.log('[bundle] StringSession available: ' + (typeof StringSession !== 'undefined'));
             console.log('[bundle] TelegramApi available: ' + (typeof TelegramApi !== 'undefined'));
-            if (typeof TelegramApi !== 'undefined') {
-                console.log('[bundle] TelegramApi.auth.SignIn available: ' + (typeof TelegramApi.auth !== 'undefined' && typeof TelegramApi.auth.SignIn !== 'undefined'));
-            }
         } catch (err) {
             console.error('[bundle] Failed to load Telegram bundle: ' + (err.message || err));
             console.error('[bundle] Stack: ' + (err.stack || 'no stack'));
