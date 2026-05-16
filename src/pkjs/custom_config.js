@@ -88,6 +88,7 @@ module.exports = function(minified) {
     }
 
     function updatePendingAction() {
+        if (loadSession()) return;
         var code = codeInput ? codeInput.get() : '';
         var phone = phoneInput ? phoneInput.get() : '';
         if (code) {

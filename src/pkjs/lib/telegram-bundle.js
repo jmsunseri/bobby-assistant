@@ -135,7 +135,7 @@ function _safeAddEventListener(target, type, listener, options) {
 function _toArrayBlob(data) {
     if (typeof Response !== 'undefined') return new Response(data).arrayBuffer();
     if (data instanceof ArrayBuffer) return Promise.resolve(data);
-    if (data instanceof Blob) return data.arrayBuffer ? data.arrayBuffer() : new Promise(function(resolve, reject) {
+    if (typeof Blob !== 'undefined' && data instanceof Blob) return data.arrayBuffer ? data.arrayBuffer() : new Promise(function(resolve, reject) {
         var reader = new FileReader();
         reader.onload = function() { resolve(reader.result); };
         reader.onerror = function() { reject(reader.error); };

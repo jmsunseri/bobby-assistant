@@ -44,10 +44,22 @@ function sendTelegramStatus() {
     });
 }
 
+function clearTelegramCodeField() {
+    try {
+        var settings = JSON.parse(localStorage.getItem('clay-settings')) || {};
+        if (settings.TELEGRAM_CODE) {
+            delete settings.TELEGRAM_CODE;
+            localStorage.setItem('clay-settings', JSON.stringify(settings));
+            console.log('[index] Cleared TELEGRAM_CODE from clay settings');
+        }
+    } catch (e) {}
+}
+
 function handleTelegramStartAuth(action) {
     console.log('[index] Starting Telegram auth for: ' + action.phoneNumber);
     telegram.startAuth(action.phoneNumber).then(function(result) {
         console.log('[index] Auth result: ' + JSON.stringify(result));
+        if (result.success) clearTelegramCodeField();
         sendTelegramStatus();
     }).catch(function(err) {
         console.error('[index] Auth failed: ' + err.message);
