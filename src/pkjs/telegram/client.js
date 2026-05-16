@@ -66,6 +66,12 @@ function initClient() {
                 }, 30000);
                 client.connect().then(function() {
                     clearTimeout(connectTimeout);
+                    if (!client.connected) {
+                        console.error('[client] connect() resolved but client.connected is false');
+                        isConnected = false;
+                        reject(new Error('Failed to connect to Telegram (not connected after retries)'));
+                        return;
+                    }
                     isConnected = true;
                     console.log('[client] Telegram client connected successfully');
                     console.log('[client] Client details - connected: ' + client.connected + ', session DC: ' + (client.session && client.session.dcId ? client.session.dcId : 'unknown'));

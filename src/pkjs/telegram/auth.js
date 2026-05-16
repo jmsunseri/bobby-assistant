@@ -29,6 +29,7 @@ var codeReject = null;
 var passwordResolve = null;
 var passwordReject = null;
 var startAuthPromise = null;
+var lastCodeViaApp = null;
 
 function startAuth(phoneNumber) {
     console.log('[auth] startAuth called for phone: ' + phoneNumber);
@@ -54,6 +55,7 @@ function startAuth(phoneNumber) {
         startAuthPromise = gramjsClient.start({
             phoneNumber: phoneNumber,
             phoneCode: function(isCodeViaApp) {
+                lastCodeViaApp = isCodeViaApp;
                 console.log('[auth] phoneCode callback triggered (isCodeViaApp: ' + isCodeViaApp + '), waiting for code from watch...');
                 return new Promise(function(resolveCode, rejectCode) {
                     codeResolve = resolveCode;
@@ -164,7 +166,8 @@ function getAuthState() {
     return {
         isWaitingForCode: codeResolve !== null,
         isWaitingForPassword: passwordResolve !== null,
-        isAuthInProgress: startAuthPromise !== null
+        isAuthInProgress: startAuthPromise !== null,
+        isCodeViaApp: lastCodeViaApp
     };
 }
 

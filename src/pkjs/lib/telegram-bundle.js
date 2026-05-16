@@ -127,62 +127,6 @@ if (typeof globalThis.crypto === 'undefined') globalThis.crypto = _crypto;
 if (typeof self !== 'undefined' && typeof self.crypto === 'undefined') self.crypto = _crypto;
 if (typeof window !== 'undefined' && typeof window.crypto === 'undefined') window.crypto = _crypto;
 })();
-// WebSocket wrapper that buffers events until handlers are assigned
-// Pebble PKJS can fire onopen before GramJS sets onopen/onmessage/etc.
-(function() {
-    if (typeof WebSocket === 'undefined') return;
-    if (WebSocket.__clawdWrapped) return;
-    var OrigWS = WebSocket;
-    function ClawdWebSocket(url, protocols) {
-        var ws = protocols ? new OrigWS(url, protocols) : new OrigWS(url);
-        var pending = [];
-        var handlers = {};
-        function flush(type) {
-            if (!handlers[type] || pending.length === 0) return;
-            var toFlush = pending.splice(0);
-            for (var i = 0; i < toFlush.length; i++) {
-                if (toFlush[i][0] === type) {
-                    handlers[type](toFlush[i][1]);
-                }
-            }
-        }
-        ws.onopen = function(e) {
-            pending.push(['open', e || { type: 'open' }]);
-            flush('open');
-        };
-        ws.onmessage = function(e) {
-            pending.push(['message', e]);
-            flush('message');
-        };
-        ws.onerror = function(e) {
-            pending.push(['error', e || { type: 'error' }]);
-            flush('error');
-        };
-        ws.onclose = function(e) {
-            pending.push(['close', e]);
-            flush('close');
-        };
-        ['open', 'message', 'error', 'close'].forEach(function(type) {
-            Object.defineProperty(ws, 'on' + type, {
-                get: function() { return handlers[type] || null; },
-                set: function(fn) {
-                    handlers[type] = fn;
-                    flush(type);
-                },
-                configurable: true,
-                enumerable: true
-            });
-        });
-        return ws;
-    }
-    ClawdWebSocket.CONNECTING = OrigWS.CONNECTING !== undefined ? OrigWS.CONNECTING : 0;
-    ClawdWebSocket.OPEN = OrigWS.OPEN !== undefined ? OrigWS.OPEN : 1;
-    ClawdWebSocket.CLOSING = OrigWS.CLOSING !== undefined ? OrigWS.CLOSING : 2;
-    ClawdWebSocket.CLOSED = OrigWS.CLOSED !== undefined ? OrigWS.CLOSED : 3;
-    ClawdWebSocket.__clawdWrapped = true;
-    globalThis.WebSocket = ClawdWebSocket;
-    if (typeof window !== 'undefined') window.WebSocket = ClawdWebSocket;
-})();
 function _safeAddEventListener(target, type, listener, options) {
     try { target.addEventListener(type, listener, options); } catch(e) {}
 }
