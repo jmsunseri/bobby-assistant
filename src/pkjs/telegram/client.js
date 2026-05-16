@@ -76,17 +76,17 @@ function initClient() {
                     isConnected = true;
                     console.log('[client] Telegram client connected successfully');
                     console.log('[client] Client details - connected: ' + client.connected + ', session DC: ' + (client.session && client.session.dcId ? client.session.dcId : 'unknown'));
-                    return client.isUserAuthorized();
+                    return storedSession ? client.isUserAuthorized() : null;
                 }).then(function(authorized) {
                     if (authCheckDone) return;
                     authCheckDone = true;
                     if (authorized === null || authorized === undefined) {
-                        console.log('[client] isUserAuthorized check inconclusive, proceeding');
+                        console.log('[client] No stored session, proceeding (auth will be needed)');
                         resolve(true);
                         return;
                     }
                     if (!authorized) {
-                        console.error('[client] Client connected but NOT authorized');
+                        console.error('[client] Client connected but NOT authorized (stored session may be invalid)');
                         isConnected = false;
                         client = null;
                         reject(new Error('Telegram client connected but not authorized. Please re-authenticate.'));
