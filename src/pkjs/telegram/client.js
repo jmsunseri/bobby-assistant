@@ -64,17 +64,35 @@ function initClient() {
                     console.error('[client] Connection timed out after 30s');
                     reject(new Error('Connection to Telegram timed out'));
                 }, 30000);
+                var authCheckDone = false;
                 client.connect().then(function() {
                     clearTimeout(connectTimeout);
                     if (!client.connected) {
                         console.error('[client] connect() resolved but client.connected is false');
                         isConnected = false;
                         reject(new Error('Failed to connect to Telegram (not connected after retries)'));
-                        return;
+                        return null;
                     }
                     isConnected = true;
                     console.log('[client] Telegram client connected successfully');
                     console.log('[client] Client details - connected: ' + client.connected + ', session DC: ' + (client.session && client.session.dcId ? client.session.dcId : 'unknown'));
+                    return client.isUserAuthorized();
+                }).then(function(authorized) {
+                    if (authCheckDone) return;
+                    authCheckDone = true;
+                    if (authorized === null || authorized === undefined) {
+                        console.log('[client] isUserAuthorized check inconclusive, proceeding');
+                        resolve(true);
+                        return;
+                    }
+                    if (!authorized) {
+                        console.error('[client] Client connected but NOT authorized');
+                        isConnected = false;
+                        client = null;
+                        reject(new Error('Telegram client connected but not authorized. Please re-authenticate.'));
+                        return;
+                    }
+                    console.log('[client] Client is authorized');
                     resolve(true);
                 }).catch(function(err) {
                     clearTimeout(connectTimeout);

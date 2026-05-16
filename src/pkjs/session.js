@@ -170,13 +170,21 @@ Session.prototype.sendViaGramJS = function(message, botUsername, resolve, reject
     var cleanUsername = botUsername.replace(/^@/, '');
 
     telegram.initClient().then(function() {
-        var client = telegram.getClient();
-        return client.sendMessage(cleanUsername, { message: message });
+        var tgClient = telegram.getClient();
+        return tgClient.getEntity(cleanUsername).then(function(entity) {
+            console.log('[session] Resolved bot entity: ' + (entity.username || entity.id || 'unknown'));
+            return tgClient.sendMessage(entity, { message: message });
+        }, function(entityErr) {
+            console.error('[session] getEntity failed for "' + cleanUsername + '": ' + (entityErr.message || entityErr));
+            console.log('[session] Falling back to direct sendMessage with username');
+            return tgClient.sendMessage(cleanUsername, { message: message });
+        });
     }).then(function(result) {
         console.log('Message sent to', botUsername);
         self.listenForResponse(telegram.getClient(), botUsername, resolve, reject);
     }).catch(function(error) {
         console.error('GramJS error:', error);
+        console.error('GramJS error stack:', error.stack || 'no stack');
         reject(error);
     });
 };

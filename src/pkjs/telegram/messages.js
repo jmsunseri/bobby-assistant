@@ -41,11 +41,15 @@ function sendMessage(message, botUsername) {
         }
 
         var tgClient = client.getClient();
-
-        // Remove @ prefix if present for the API call
         var cleanUsername = botUsername.replace(/^@/, '');
 
-        tgClient.sendMessage(cleanUsername, { message: message }).then(function(result) {
+        tgClient.getEntity(cleanUsername).then(function(entity) {
+            console.log('[messages] Resolved bot entity: ' + (entity.username || entity.id || 'unknown'));
+            return tgClient.sendMessage(entity, { message: message });
+        }, function() {
+            console.log('[messages] getEntity failed, falling back to direct sendMessage');
+            return tgClient.sendMessage(cleanUsername, { message: message });
+        }).then(function(result) {
             console.log('Message sent to', botUsername);
             resolve({
                 success: true,
