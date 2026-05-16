@@ -171,80 +171,47 @@ Session.prototype.sendViaGramJS = function(message, botUsername, resolve, reject
 
     telegram.initClient().then(function() {
         var tgClient = telegram.getClient();
-        console.log('[session] Resolving username: "' + cleanUsername + '" (charCodes: ' + Array.prototype.map.call(cleanUsername, function(c) { return c.charCodeAt(0); }).join(',') + ')');
-        return self._resolveBotEntity(tgClient, cleanUsername).then(function(entity) {
-            console.log('[session] Resolved to: id=' + entity.id + ', username=' + (entity.username || 'none') + ', bot=' + (entity.bot || false));
-            return tgClient.sendMessage(entity, { message: message });
-        });
+        return tgClient.sendMessage(cleanUsername, { message: message });
     }).then(function(result) {
         console.log('[session] Message sent to', botUsername, 'id:', result ? result.id : 'unknown');
         self.listenForResponse(telegram.getClient(), botUsername, resolve, reject);
     }).catch(function(error) {
         console.error('[session] GramJS error:', error);
-        console.error('[session] Error stack:', error.stack || 'no stack');
         reject(error);
-    });
-};
-
-Session.prototype._resolveBotEntity = function(tgClient, username) {
-    return tgClient.invoke(new TelegramApi.contacts.ResolveUsername({ username: username })).then(function(result) {
-        var entity = result.users && result.users.length ? result.users[0] : (result.chats && result.chats.length ? result.chats[0] : null);
-        if (entity) return entity;
-        throw new Error('ResolveUsername returned no entity');
-    }).catch(function(err) {
-        var msg = err.errorMessage || err.message || '';
-        if (msg.indexOf('USERNAME_NOT_OCCUPIED') === -1 && msg.indexOf('as username') === -1) throw err;
-        console.log('[session] ResolveUsername failed, trying contacts.Search...');
-        return tgClient.invoke(new TelegramApi.contacts.Search({ q: username, limit: 5 })).then(function(result) {
-            console.log('[session] contacts.Search returned ' + (result.users ? result.users.length : 0) + ' users');
-            for (var i = 0; result.users && i < result.users.length; i++) {
-                var u = result.users[i];
-                if (u.username && u.username.toLowerCase() === username.toLowerCase()) {
-                    console.log('[session] Found via contacts.Search: id=' + u.id + ', username=' + u.username);
-                    return u;
-                }
-            }
-            throw new Error('Username "' + username + '" not found via contacts.Search either');
-        });
     });
 };
 
 Session.prototype.listenForResponse = function(client, botUsername, resolve, reject) {
     var self = this;
-    var timeout = 120000; // 2 minute timeout
-    var startTime = Date.now();
-    var responseBuffer = '';
-    var expectedLength = null;
-    var receivedComplete = false;
+    var timeout = 120000;
+    var startMsgId = 0;
+    var resolved = false;
+    var processedIds = {};
 
-    // Clean username for comparison
-    var cleanBotUsername = botUsername.replace(/^@/, '').toLowerCase();
+    function done(result) {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(timeoutId);
+        resolve(result);
+    }
 
-    // Set up timeout
     var timeoutId = setTimeout(function() {
-        reject(new Error('Timeout waiting for response from OpenClaw'));
+        done({ complete: false, error: 'Timeout waiting for response from OpenClaw' });
     }, timeout);
 
-    // Listen for new messages
     if (typeof NewMessage !== 'undefined') {
         client.addEventHandler(function(event) {
             try {
+                if (resolved) return;
                 var msg = event.message;
-                if (msg && msg.message) {
-                    // Check if from the bot
-                    // This is a simplified check - in practice you'd resolve the bot's user ID
-                    self.handleIncomingMessage(msg.message, resolve);
-                }
+                if (!msg || !msg.message) return;
+                if (processedIds[msg.id]) return;
+                processedIds[msg.id] = true;
+                self.handleIncomingMessage(msg.message, done);
             } catch (err) {
-                console.error('Error handling message:', err);
+                console.error('[session] Error handling message:', err);
             }
         }, new NewMessage({}));
-
-        // Also poll for messages as fallback
-        self.pollForMessages(client, botUsername, startTime, timeoutId, resolve, reject);
-    } else {
-        // Just poll
-        self.pollForMessages(client, botUsername, startTime, timeoutId, resolve, reject);
     }
 };
 
