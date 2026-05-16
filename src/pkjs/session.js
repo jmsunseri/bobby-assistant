@@ -63,9 +63,7 @@ Session.prototype.run = function() {
     var message = this.buildMessage();
 
     // Send to OpenClaw bot via Telegram
-    this.sendToOpenClaw(message).then(function(response) {
-        self.handleResponse(response);
-    }).catch(function(error) {
+    this.sendToOpenClaw(message).catch(function(error) {
         console.error('Telegram session error:', error);
         self.enqueue({
             CHAT: 'Error communicating with OpenClaw: ' + error.message
@@ -252,13 +250,13 @@ Session.prototype.pollForMessages = function(client, botUsername, startTime, tim
 Session.prototype.handleIncomingMessage = function(message, resolve) {
     console.log('Received message:', message.substring(0, 100));
 
-    // Parse the OpenClaw message format
-    // Expected format:
-    // "c:text" - content
+    // Parse the message format:
+    // "c:text" - content (streamed, expect "d:" later)
     // "f:tool_call" - function call
-    // "d:" - done
+    // "d:" - done (end of streamed response)
     // "t:thread_id" - thread ID
     // "w:warning" - warning
+    // Plain text - complete response (no streaming)
 
     if (message.startsWith('c:')) {
         var content = message.substring(1);
@@ -319,14 +317,17 @@ Session.prototype.handleIncomingMessage = function(message, resolve) {
             WARNING: message.substring(1)
         });
     } else if (message.startsWith('a:')) {
-        // Action from the bot
         actions.handleAction(this, { send: function() {} }, message.substring(1));
     } else {
-        // Plain text - treat as content
         this.hasOpenDialog = true;
         this.enqueue({
             CHAT: message
         });
+        this.hasOpenDialog = false;
+        this.enqueue({
+            CHAT_DONE: true
+        });
+        resolve({ complete: true });
     }
 };
 
