@@ -69,24 +69,20 @@ function startAuth(phoneNumber) {
             console.log('[auth] SendCode result: phoneCodeHash=' + (result.phoneCodeHash ? 'received' : 'missing'));
             if (!result || !result.phoneCodeHash) {
                 if (result && result.className === 'auth.SentCodeSuccess') {
-                    authClient.disconnect().catch(function() {});
                     reject(new Error('This session is already authorized.'));
                     return;
                 }
-                authClient.disconnect().catch(function() {});
                 reject(new Error('Telegram did not return a login code hash.'));
                 return;
             }
             phoneCodeHash = result.phoneCodeHash;
             authSession = authClient.session.save();
-            authClient.disconnect().catch(function() {});
             resolve({
                 success: true,
                 status: 'code_sent'
             });
         }).catch(function(err) {
             console.error('[auth] startAuth failed: ' + (err.message || err));
-            authClient.disconnect().catch(function() {});
             reject(new Error('Auth failed: ' + (err.errorMessage || err.message)));
         });
     });
@@ -124,7 +120,6 @@ function provideCode(code) {
             session.saveSession(sessionStr);
             phoneCodeHash = null;
             authSession = null;
-            signInClient.disconnect().catch(function() {});
             resolve({
                 success: true,
                 status: 'signed_in'
@@ -136,7 +131,6 @@ function provideCode(code) {
                 console.log('[auth] 2FA required');
                 authSession = signInClient.session.save();
                 phoneCodeHash = null;
-                signInClient.disconnect().catch(function() {});
                 resolve({
                     success: false,
                     status: 'password_needed',
@@ -146,7 +140,6 @@ function provideCode(code) {
             }
             phoneCodeHash = null;
             authSession = null;
-            signInClient.disconnect().catch(function() {});
             reject(new Error('SignIn failed: ' + msg));
         });
     });
@@ -186,14 +179,12 @@ function providePassword(password) {
             var sessionStr = pwClient.session.save();
             session.saveSession(sessionStr);
             authSession = null;
-            pwClient.disconnect().catch(function() {});
             resolve({
                 success: true,
                 status: 'signed_in'
             });
         }).catch(function(err) {
             console.error('[auth] 2FA failed: ' + (err.message || err));
-            pwClient.disconnect().catch(function() {});
             authSession = null;
             reject(new Error('2FA failed: ' + (err.message || err)));
         });
