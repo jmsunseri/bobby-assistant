@@ -38,11 +38,14 @@ function startAuth(phoneNumber) {
         }
 
         var Api = (typeof TelegramApi !== 'undefined') ? TelegramApi : (gramjsClient.Api || {});
+        var apiId = parseInt(process.env.TELEGRAM_APP_ID, 10);
+        var apiHash = process.env.TELEGRAM_APP_HASH || '';
+        console.log('[auth] apiId: ' + apiId + ', apiHash length: ' + apiHash.length);
 
         gramjsClient.invoke(new Api.auth.SendCode({
             phoneNumber: phoneNumber,
-            apiId: gramjsClient.apiId,
-            apiHash: gramjsClient.apiHash,
+            apiId: apiId,
+            apiHash: apiHash,
             settings: new Api.CodeSettings({})
         })).then(function(result) {
             console.log('[auth] SendCode result: phoneCodeHash=' + (result.phoneCodeHash ? 'received' : 'missing'));
