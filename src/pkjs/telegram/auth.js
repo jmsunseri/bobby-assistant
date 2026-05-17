@@ -69,16 +69,17 @@ function startAuth(phoneNumber) {
             console.log('[auth] SendCode result: phoneCodeHash=' + (result.phoneCodeHash ? 'received' : 'missing'));
             if (!result || !result.phoneCodeHash) {
                 if (result && result.className === 'auth.SentCodeSuccess') {
+                    authClient.disconnect().catch(function() {});
                     reject(new Error('This session is already authorized.'));
                     return;
                 }
+                authClient.disconnect().catch(function() {});
                 reject(new Error('Telegram did not return a login code hash.'));
                 return;
             }
             phoneCodeHash = result.phoneCodeHash;
             authSession = authClient.session.save();
-            return authClient.disconnect();
-        }).then(function() {
+            authClient.disconnect().catch(function() {});
             resolve({
                 success: true,
                 status: 'code_sent'
@@ -123,8 +124,7 @@ function provideCode(code) {
             session.saveSession(sessionStr);
             phoneCodeHash = null;
             authSession = null;
-            return signInClient.disconnect();
-        }).then(function() {
+            signInClient.disconnect().catch(function() {});
             resolve({
                 success: true,
                 status: 'signed_in'
@@ -186,8 +186,7 @@ function providePassword(password) {
             var sessionStr = pwClient.session.save();
             session.saveSession(sessionStr);
             authSession = null;
-            return pwClient.disconnect();
-        }).then(function() {
+            pwClient.disconnect().catch(function() {});
             resolve({
                 success: true,
                 status: 'signed_in'
