@@ -76,9 +76,11 @@ Session.prototype.run = function() {
 
 Session.prototype.buildMessage = function() {
     var settings = getSettings();
+    var supportedActions = actions.getSupportedActions();
     var metadata = {
         tzOffset: -(new Date()).getTimezoneOffset(),
-        actions: actions.getSupportedActions(),
+        actions: supportedActions,
+        tools: tools.getToolDefinitions(supportedActions),
         widgets: ['weather', 'timer', 'number'],
         units: settings['UNIT_PREFERENCE'] || '',
         lang: settings['LANGUAGE_CODE'] || '',
