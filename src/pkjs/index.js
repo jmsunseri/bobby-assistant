@@ -70,11 +70,14 @@ function handleTelegramStartAuth(action) {
 
 function handleTelegramProvideCode(action) {
     console.log('[index] Providing verification code');
-    var accepted = telegram.provideCode(action.code);
-    if (!accepted) {
-        console.error('[index] No pending code request — start auth first');
+    telegram.provideCode(action.code).then(function(result) {
+        console.log('[index] ProvideCode result: ' + JSON.stringify(result));
+        if (result.success) clearTelegramCodeField();
         sendTelegramStatus();
-    }
+    }).catch(function(err) {
+        console.error('[index] ProvideCode failed: ' + err.message);
+        sendTelegramStatus();
+    });
 }
 
 function handleTelegramProvidePassword(action) {
