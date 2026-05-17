@@ -25,42 +25,68 @@ var session = require('./session');
 
 var phoneCodeHash = null;
 var pendingPhone = null;
+var authSession = null;
+
+var AUTH_DC = {
+    id: 1,
+    host: 'pluto.web.telegram.org'
+};
+
+function createAuthClient() {
+    var StringSessionCls = StringSession;
+    var apiId = parseInt(process.env.TELEGRAM_APP_ID, 10);
+    var apiHash = process.env.TELEGRAM_APP_HASH || '';
+    var newClient = new TelegramClient(new StringSessionCls(''), apiId, apiHash, {
+        connectionRetries: 5,
+        deviceModel: 'Clawd',
+        systemVersion: '1.0',
+        appVersion: '1.0'
+    });
+    if (newClient.session && typeof newClient.session.setDC === 'function') {
+        newClient.session.setDC(AUTH_DC.id, AUTH_DC.host, 443);
+    }
+    return newClient;
+}
 
 function startAuth(phoneNumber) {
     console.log('[auth] startAuth called for phone: ' + phoneNumber);
     pendingPhone = phoneNumber;
     return new Promise(function(resolve, reject) {
-        var gramjsClient = client.getClient();
-        if (!gramjsClient) {
-            console.error('[auth] Cannot start auth: GramJS client not initialized');
-            reject(new Error('Telegram client not initialized.'));
-            return;
-        }
-
-        var Api = (typeof TelegramApi !== 'undefined') ? TelegramApi : (gramjsClient.Api || {});
+        var authClient = createAuthClient();
+        var Api = (typeof TelegramApi !== 'undefined') ? TelegramApi : (authClient.Api || {});
         var apiId = parseInt(process.env.TELEGRAM_APP_ID, 10);
         var apiHash = process.env.TELEGRAM_APP_HASH || '';
-        console.log('[auth] apiId: ' + apiId + ', apiHash length: ' + apiHash.length);
 
-        gramjsClient.invoke(new Api.auth.SendCode({
-            phoneNumber: phoneNumber,
-            apiId: apiId,
-            apiHash: apiHash,
-            settings: new Api.CodeSettings({})
-        })).then(function(result) {
+        authClient.connect().then(function() {
+            console.log('[auth] Auth client connected, sending code...');
+            return authClient.invoke(new Api.auth.SendCode({
+                phoneNumber: phoneNumber,
+                apiId: apiId,
+                apiHash: apiHash,
+                settings: new Api.CodeSettings({})
+            }));
+        }).then(function(result) {
             console.log('[auth] SendCode result: phoneCodeHash=' + (result.phoneCodeHash ? 'received' : 'missing'));
             if (!result || !result.phoneCodeHash) {
+                if (result && result.className === 'auth.SentCodeSuccess') {
+                    reject(new Error('This session is already authorized.'));
+                    return;
+                }
                 reject(new Error('Telegram did not return a login code hash.'));
                 return;
             }
             phoneCodeHash = result.phoneCodeHash;
+            authSession = authClient.session.save();
+            return authClient.disconnect();
+        }).then(function() {
             resolve({
                 success: true,
                 status: 'code_sent'
             });
         }).catch(function(err) {
-            console.error('[auth] SendCode failed: ' + (err.message || err));
-            reject(new Error('SendCode failed: ' + (err.errorMessage || err.message)));
+            console.error('[auth] startAuth failed: ' + (err.message || err));
+            authClient.disconnect().catch(function() {});
+            reject(new Error('Auth failed: ' + (err.errorMessage || err.message)));
         });
     });
 }
@@ -68,28 +94,37 @@ function startAuth(phoneNumber) {
 function provideCode(code) {
     console.log('[auth] provideCode called');
     return new Promise(function(resolve, reject) {
-        var gramjsClient = client.getClient();
-        if (!gramjsClient) {
-            reject(new Error('Telegram client not initialized.'));
-            return;
-        }
         if (!phoneCodeHash) {
             reject(new Error('No pending code request — call startAuth first'));
             return;
         }
-
-        var Api = (typeof TelegramApi !== 'undefined') ? TelegramApi : (gramjsClient.Api || {});
+        var apiId = parseInt(process.env.TELEGRAM_APP_ID, 10);
+        var apiHash = process.env.TELEGRAM_APP_HASH || '';
         var phone = pendingPhone || '';
+        var StringSessionCls = StringSession;
+        var signInClient = new TelegramClient(new StringSessionCls(authSession || ''), apiId, apiHash, {
+            connectionRetries: 5,
+            deviceModel: 'Clawd',
+            systemVersion: '1.0',
+            appVersion: '1.0'
+        });
+        var Api = (typeof TelegramApi !== 'undefined') ? TelegramApi : (signInClient.Api || {});
 
-        gramjsClient.invoke(new Api.auth.SignIn({
-            phoneNumber: phone,
-            phoneCodeHash: phoneCodeHash,
-            phoneCode: code
-        })).then(function(result) {
+        signInClient.connect().then(function() {
+            console.log('[auth] SignIn client connected, signing in...');
+            return signInClient.invoke(new Api.auth.SignIn({
+                phoneNumber: phone,
+                phoneCodeHash: phoneCodeHash,
+                phoneCode: code
+            }));
+        }).then(function(result) {
             console.log('[auth] SignIn successful');
-            var sessionStr = gramjsClient.session.save();
+            var sessionStr = signInClient.session.save();
             session.saveSession(sessionStr);
             phoneCodeHash = null;
+            authSession = null;
+            return signInClient.disconnect();
+        }).then(function() {
             resolve({
                 success: true,
                 status: 'signed_in'
@@ -99,7 +134,9 @@ function provideCode(code) {
             console.error('[auth] SignIn failed: ' + msg);
             if (msg === 'SESSION_PASSWORD_NEEDED') {
                 console.log('[auth] 2FA required');
+                authSession = signInClient.session.save();
                 phoneCodeHash = null;
+                signInClient.disconnect().catch(function() {});
                 resolve({
                     success: false,
                     status: 'password_needed',
@@ -108,6 +145,8 @@ function provideCode(code) {
                 return;
             }
             phoneCodeHash = null;
+            authSession = null;
+            signInClient.disconnect().catch(function() {});
             reject(new Error('SignIn failed: ' + msg));
         });
     });
@@ -116,32 +155,47 @@ function provideCode(code) {
 function providePassword(password) {
     console.log('[auth] providePassword called');
     return new Promise(function(resolve, reject) {
-        var gramjsClient = client.getClient();
-        if (!gramjsClient) {
-            reject(new Error('Telegram client not initialized.'));
+        if (!authSession) {
+            reject(new Error('No pending 2FA request — sign in first'));
             return;
         }
+        var apiId = parseInt(process.env.TELEGRAM_APP_ID, 10);
+        var apiHash = process.env.TELEGRAM_APP_HASH || '';
+        var StringSessionCls = StringSession;
+        var pwClient = new TelegramClient(new StringSessionCls(authSession), apiId, apiHash, {
+            connectionRetries: 5,
+            deviceModel: 'Clawd',
+            systemVersion: '1.0',
+            appVersion: '1.0'
+        });
 
-        gramjsClient.signInWithPassword({
-            apiId: gramjsClient.apiId,
-            apiHash: gramjsClient.apiHash
-        }, {
-            password: function() {
-                return Promise.resolve(password);
-            },
-            onError: function(err) {
-                reject(new Error('2FA failed: ' + (err.message || err)));
-            }
+        pwClient.connect().then(function() {
+            return pwClient.signInWithPassword({
+                apiId: apiId,
+                apiHash: apiHash
+            }, {
+                password: function() {
+                    return Promise.resolve(password);
+                },
+                onError: function(err) {
+                    reject(new Error('2FA failed: ' + (err.message || err)));
+                }
+            });
         }).then(function() {
             console.log('[auth] 2FA successful');
-            var sessionStr = gramjsClient.session.save();
+            var sessionStr = pwClient.session.save();
             session.saveSession(sessionStr);
+            authSession = null;
+            return pwClient.disconnect();
+        }).then(function() {
             resolve({
                 success: true,
                 status: 'signed_in'
             });
         }).catch(function(err) {
             console.error('[auth] 2FA failed: ' + (err.message || err));
+            pwClient.disconnect().catch(function() {});
+            authSession = null;
             reject(new Error('2FA failed: ' + (err.message || err)));
         });
     });
