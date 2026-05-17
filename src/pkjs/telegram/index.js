@@ -31,6 +31,7 @@ module.exports = {
     getCurrentUser: client.getCurrentUser,
     disconnect: client.disconnect,
     getClient: client.getClient,
+    resetClient: client.resetClient,
 
     // Auth
     startAuth: auth.startAuth,

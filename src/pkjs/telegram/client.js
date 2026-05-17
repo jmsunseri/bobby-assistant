@@ -181,8 +181,15 @@ exports.StringSession = typeof StringSession !== 'undefined' ? StringSession : f
     };
 };
 
+function resetClient() {
+    console.log('[client] Resetting client — will reconnect with new session');
+    client = null;
+    isConnected = false;
+}
+
 exports.initClient = initClient;
 exports.isClientConnected = isClientConnected;
 exports.getCurrentUser = getCurrentUser;
 exports.disconnect = disconnect;
 exports.getClient = getClient;
+exports.resetClient = resetClient;
