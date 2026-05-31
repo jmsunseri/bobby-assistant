@@ -33,6 +33,13 @@
 #include <pebble.h>
 
 #define PADDING 5
+#ifdef PBL_PLATFORM_GABBRO
+#define SEGMENT_X 10
+#define SEGMENT_W_PADDING 20
+#else
+#define SEGMENT_X 0
+#define SEGMENT_W_PADDING 0
+#endif
 
 struct SessionWindow {
   Window* window;
@@ -344,7 +351,7 @@ static void prv_conversation_manager_handler(bool entry_added, void* context) {
     free(sw->segment_layers);
     sw->segment_layers = new_block;
   }
-  SegmentLayer* layer = segment_layer_create(GRect(0, prv_content_height(sw), holder_size.w, 10), entry, conversation_assistant_just_started(conversation));
+  SegmentLayer* layer = segment_layer_create(GRect(SEGMENT_X, prv_content_height(sw), holder_size.w - SEGMENT_W_PADDING, 10), entry, conversation_assistant_just_started(conversation));
   sw->segment_layers[sw->segment_count++] = layer;
   // It's possible that the content height changed *while the layer was being created*. In case this happened, move the
   // layer back to where it should be. Because segment layers are expected to adjust their own frame during
