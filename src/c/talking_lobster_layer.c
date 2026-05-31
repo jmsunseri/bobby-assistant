@@ -73,25 +73,15 @@ static void prv_update_layer(Layer *layer, GContext *ctx) {
   const int corner_offset = 6;
 
   // Lobster position
-#ifdef PBL_PLATFORM_EMERY
+#if defined(PBL_PLATFORM_EMERY)
   const int lobster_height = 177;
   const int lobster_width = 171;
   const int lobster_x = 0;
   const int lobster_y = size.h - lobster_height;
-#elif defined(PBL_PLATFORM_CHALK)
-  const int lobster_height = 118;
-  const int lobster_width = 114;
+#elif defined(PBL_PLATFORM_GABBRO)
+  const int lobster_height = 177;
+  const int lobster_width = 171;
   const int lobster_x = (size.w - lobster_width) / 2;
-  const int lobster_y = size.h - lobster_height;
-#elif defined(PBL_ROUND)
-  const int lobster_height = 118;
-  const int lobster_width = 114;
-  const int lobster_x = (size.w - lobster_width) / 2;
-  const int lobster_y = size.h - lobster_height + 30;
-#else
-  const int lobster_height = 118;
-  const int lobster_width = 114;
-  const int lobster_x = 0;
   const int lobster_y = size.h - lobster_height;
 #endif
 
@@ -152,22 +142,14 @@ static GRangeHorizontal prv_perimeter_callback(const GPerimeter *perimeter, cons
   Layer *layer = data->layer;
   GRect bounds = layer_get_bounds(layer);
   // the lobster is drawn at the bottom-left of the layer
-#ifdef PBL_PLATFORM_EMERY
+#if defined(PBL_PLATFORM_EMERY)
   const int16_t lobster_size = 177;
   const int16_t lobster_y_offset = 0;
   const int16_t lobster_x = 0;
-#elif defined(PBL_PLATFORM_CHALK)
-  const int16_t lobster_size = 118;
+#elif defined(PBL_PLATFORM_GABBRO)
+  const int16_t lobster_size = 177;
   const int16_t lobster_y_offset = 0;
   const int16_t lobster_x = (bounds.size.w - lobster_size) / 2;
-#elif defined(PBL_ROUND)
-  const int16_t lobster_size = 118;
-  const int16_t lobster_y_offset = 30;
-  const int16_t lobster_x = (bounds.size.w - lobster_size) / 2;
-#else
-  const int16_t lobster_size = 118;
-  const int16_t lobster_y_offset = 0;
-  const int16_t lobster_x = 0;
 #endif
   GPoint wrap_point = layer_convert_point_to_screen(layer, GPoint(lobster_x + lobster_size, bounds.size.h - lobster_size + lobster_y_offset));
   // We know the lobster is at the bottom of our layer, so we don't bother worrying about text being rendered past it.

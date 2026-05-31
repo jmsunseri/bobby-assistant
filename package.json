@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@rebble/clay": "1.0.8",
-    "pebble-events": "^1.2.0"
+    "@rebble/linked-list": "^1.5.1",
+    "pebble-events": "^1.2.1"
   },
   "pebble": {
     "displayName": "Clawd",
@@ -23,10 +24,8 @@
       "location"
     ],
     "targetPlatforms": [
-      "basalt",
-      "chalk",
-      "diorite",
-      "emery"
+      "emery",
+      "gabbro"
     ],
     "watchapp": {
       "watchface": false
@@ -40,15 +39,7 @@
       "CLOSE_WAS_CLEAN",
       "CHAT_DONE",
       "THREAD_ID",
-      "SET_ALARM_TIME",
-      "SET_ALARM_IS_TIMER",
-      "SET_ALARM_RESULT",
-      "GET_ALARM_OR_TIMER",
-      "GET_ALARM_RESULT[9]",
-      "ACTION_REMINDER_WAS_SET",
       "CURRENT_TIME",
-      "CANCEL_ALARM_TIME",
-      "CANCEL_ALARM_IS_TIMER",
       "LANGUAGE_CODE",
       "UNIT_PREFERENCE",
       "LOCATION_ENABLED",
@@ -81,24 +72,10 @@
       "WEATHER_WIDGET_MULTI_LOW_0",
       "WEATHER_WIDGET_MULTI_LOW_1",
       "WEATHER_WIDGET_MULTI_LOW_2",
-      "REMINDER_LIST_REQUEST",
-      "REMINDER_COUNT",
-      "REMINDER_TEXT",
-      "REMINDER_ID",
-      "REMINDER_TIME",
-      "REMINDER_DELETE",
-      "ACTION_REMINDER_DELETED",
-      "SET_ALARM_NAME",
-      "GET_ALARM_NAME[9]",
-      "TIMER_WIDGET",
-      "TIMER_WIDGET_TARGET_TIME",
-      "TIMER_WIDGET_NAME",
       "HIGHLIGHT_WIDGET",
       "HIGHLIGHT_WIDGET_PRIMARY",
       "HIGHLIGHT_WIDGET_SECONDARY",
       "QUICK_LAUNCH_BEHAVIOUR",
-      "TIMER_VIBE_PATTERN",
-      "ALARM_VIBE_PATTERN",
       "COBBLE_WARNING",
       "IMAGE_WIDTH",
       "IMAGE_HEIGHT",
@@ -149,22 +126,9 @@
           "type": "bitmap"
         },
         {
-          "file": "images_root_screen_lobster.pdc",
-          "name": "ROOT_SCREEN_LOBSTER",
-          "type": "raw",
-          "targetPlatforms": [
-            "basalt",
-            "chalk",
-            "diorite"
-          ]
-        },
-        {
           "file": "images_root_screen_lobster_large.pdc",
           "name": "ROOT_SCREEN_LOBSTER",
-          "type": "raw",
-          "targetPlatforms": [
-            "emery"
-          ]
+          "type": "raw"
         },
         {
           "file": "images_sleeping_pony.pdc",
@@ -315,21 +279,7 @@
           "file": "images_icons_menu_about.png",
           "name": "MENU_ICON_ABOUT",
           "type": "bitmap",
-          "memoryFormat": "SmallestPalette",
-          "targetPlatforms": [
-            "basalt",
-            "chalk",
-            "emery"
-          ]
-        },
-        {
-          "file": "images_icons_menu_about_bw.png",
-          "name": "MENU_ICON_ABOUT",
-          "type": "bitmap",
-          "memoryFormat": "1Bit",
-          "targetPlatforms": [
-            "diorite"
-          ]
+          "memoryFormat": "SmallestPalette"
         },
         {
           "file": "vibes_haptic_feedback.vibe",
