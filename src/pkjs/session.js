@@ -180,7 +180,6 @@ Session.prototype.sendViaGramJS = function(message, botUsername, resolve, reject
 Session.prototype.listenForResponse = function(client, botUsername, resolve, reject) {
     var self = this;
     var timeout = 120000;
-    var startMsgId = 0;
     var resolved = false;
     var processedIds = {};
 
