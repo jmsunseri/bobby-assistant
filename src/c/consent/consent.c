@@ -34,9 +34,11 @@
 #ifdef PBL_PLATFORM_GABBRO
 #define TEXT_PADDING 20
 #define TEXT_ALIGNMENT GTextAlignmentCenter
+#define SCROLL_BOTTOM_PADDING 60
 #else
 #define TEXT_PADDING 10
 #define TEXT_ALIGNMENT GTextAlignmentLeft
+#define SCROLL_BOTTOM_PADDING 0
 #endif
 
 typedef struct {
@@ -205,7 +207,7 @@ static void prv_set_stage(Window* window, int stage) {
     TEXT_ALIGNMENT);
   text_size.h += 5;
   text_layer_set_size(data->text_layer, text_size);
-  scroll_layer_set_content_size(data->scroll_layer, GSize(window_size.w, 33 + text_size.h));
+  scroll_layer_set_content_size(data->scroll_layer, GSize(window_size.w, 33 + text_size.h + SCROLL_BOTTOM_PADDING));
   scroll_layer_set_content_offset(data->scroll_layer, GPoint(0, 0), false);
 }
 

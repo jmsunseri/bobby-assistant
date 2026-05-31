@@ -36,9 +36,11 @@
 #ifdef PBL_PLATFORM_GABBRO
 #define SEGMENT_X 10
 #define SEGMENT_W_PADDING 20
+#define BOTTOM_PADDING 60
 #else
 #define SEGMENT_X 0
 #define SEGMENT_W_PADDING 0
+#define BOTTOM_PADDING 0
 #endif
 
 struct SessionWindow {
@@ -248,7 +250,7 @@ static void prv_dictation_status_callback(DictationSession *session, DictationSe
 
 static void prv_set_scroll_height(SessionWindow* sw) {
   GSize old_size = scroll_layer_get_content_size(sw->scroll_layer);
-  GSize new_size = GSize(old_size.w, sw->content_height + PADDING);
+  GSize new_size = GSize(old_size.w, sw->content_height + PADDING + BOTTOM_PADDING);
   if (old_size.h >= new_size.h) {
     return;
   }

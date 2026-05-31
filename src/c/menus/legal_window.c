@@ -65,7 +65,11 @@ static void prv_window_load(Window* window) {
 #endif
   formatted_text_layer_set_text(data->text_layer, data->legal_text);
  GSize text_size = formatted_text_layer_get_content_size(data->text_layer);
- scroll_layer_set_content_size(data->scroll_layer, GSize(window_bounds.size.w, text_size.h + 10));
+  scroll_layer_set_content_size(data->scroll_layer, GSize(window_bounds.size.w, text_size.h + 10
+#ifdef PBL_PLATFORM_GABBRO
+    + 60
+#endif
+  ));
  scroll_layer_add_child(data->scroll_layer, formatted_text_layer_get_layer(data->text_layer));
 }
 
