@@ -287,31 +287,6 @@
           "type": "raw"
         },
         {
-          "file": "vibes_jackhammer.vibe",
-          "name": "VIBE_JACKHAMMER",
-          "type": "raw"
-        },
-        {
-          "file": "vibes_mario.vibe",
-          "name": "VIBE_MARIO",
-          "type": "raw"
-        },
-        {
-          "file": "vibes_nudge_nudge.vibe",
-          "name": "VIBE_NUDGE_NUDGE",
-          "type": "raw"
-        },
-        {
-          "file": "vibes_reveille.vibe",
-          "name": "VIBE_REVEILLE",
-          "type": "raw"
-        },
-        {
-          "file": "vibes_standard_long_high.vibe",
-          "name": "VIBE_STANDARD",
-          "type": "raw"
-        },
-        {
           "file": "images_skull.pdc",
           "name": "IMAGE_SKULL",
           "type": "raw"
