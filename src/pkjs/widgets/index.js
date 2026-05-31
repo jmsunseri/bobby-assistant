@@ -16,12 +16,10 @@
 
 var map = require('./map');
 var weather = require('./weather');
-var timer = require('./timer');
 var highlights = require('./highlights');
 var features = require('../features');
 
 var widgetMap = {
-    'timer': timer.timer,
     'number': highlights.number,
     'weather-single-day': weather.singleDay,
     'weather-current': weather.current,

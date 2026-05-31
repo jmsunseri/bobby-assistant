@@ -20,7 +20,6 @@
 #include "converse/session_window.h"
 #include "converse/conversation_manager.h"
 #include "image_manager/image_manager.h"
-#include "alarms/manager.h"
 #include "version/version.h"
 #include "settings/settings.h"
 
@@ -45,7 +44,6 @@ static void prv_init(void) {
   image_manager_init();
 #endif
   events_app_message_open();
-  alarm_manager_init();
 }
 
 static void prv_deinit(void) {
@@ -62,28 +60,23 @@ int main(void) {
   CLAWD_LOG(APP_LOG_LEVEL_INFO, "Clawd %d.%d", version_info.major, version_info.minor);
   prv_init();
   
-  if (alarm_manager_maybe_alarm()) {
-    // don't actually have anything to do here - the alarm manager already did it.
+  if (must_present_consent()) {
+    consent_window_push();
   } else {
-    if (must_present_consent()) {
-      consent_window_push();
-    } else {
-      if (launch_reason() == APP_LAUNCH_QUICK_LAUNCH) {
-        QuickLaunchBehaviour quick_launch_behaviour = settings_get_quick_launch_behaviour();
-        if (quick_launch_behaviour != QuickLaunchBehaviourHomeScreen) {
-          session_window_push(quick_launch_behaviour == QuickLaunchBehaviourConverseWithTimeout ? QUICK_LAUNCH_TIMEOUT_MS : 0, NULL);
-        } else {
-          s_root_window = root_window_create();
-          root_window_push(s_root_window);
-        }
+    if (launch_reason() == APP_LAUNCH_QUICK_LAUNCH) {
+      QuickLaunchBehaviour quick_launch_behaviour = settings_get_quick_launch_behaviour();
+      if (quick_launch_behaviour != QuickLaunchBehaviourHomeScreen) {
+        session_window_push(quick_launch_behaviour == QuickLaunchBehaviourConverseWithTimeout ? QUICK_LAUNCH_TIMEOUT_MS : 0, NULL);
       } else {
         s_root_window = root_window_create();
         root_window_push(s_root_window);
       }
-      release_notes_maybe_push();
+    } else {
+      s_root_window = root_window_create();
+      root_window_push(s_root_window);
     }
+    release_notes_maybe_push();
   }
-
 
   app_event_loop();
   prv_deinit();

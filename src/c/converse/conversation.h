@@ -24,9 +24,6 @@ typedef struct Conversation Conversation;
 typedef struct ConversationEntry ConversationEntry;
 
 typedef enum {
-  ConversationActionTypeSetAlarm,
-  ConversationActionTypeSetReminder,
-  ConversationActionTypeDeleteReminder,
   ConversationActionTypeUpdateChecklist,
   ConversationActionTypeGenericSentence,
 } ConversationActionType;
@@ -35,26 +32,11 @@ typedef enum {
   ConversationWidgetTypeWeatherSingleDay,
   ConversationWidgetTypeWeatherCurrent,
   ConversationWidgetTypeWeatherMultiDay,
-  ConversationWidgetTypeTimer,
   ConversationWidgetTypeNumber,
 #if ENABLE_FEATURE_MAPS
   ConversationWidgetTypeMap,
 #endif
 } ConversationWidgetType;
-
-typedef struct {
-  time_t time;
-  bool is_timer;
-  bool deleted;
-  char* name;
-} ConversationActionSetAlarm;
-
-typedef struct {
-  time_t time;
-} ConversationActionSetReminder;
-
-typedef struct {
-} ConversationActionDeleteReminder;
 
 typedef struct {
 } ConversationActionPokeHomeAssistant;
@@ -66,8 +48,6 @@ typedef struct {
 typedef struct {
   ConversationActionType type;
   union {
-    ConversationActionSetAlarm set_alarm;
-    ConversationActionSetReminder set_reminder;
     ConversationActionPokeHomeAssistant poke_hass;
     ConversationActionGenericSentence generic_sentence;
   } action;
@@ -125,11 +105,6 @@ typedef struct {
 } ConversationWidgetWeatherMultiDay;
 
 typedef struct {
-  time_t target_time;
-  char *name;
-} ConversationWidgetTimer;
-
-typedef struct {
   char *number;
   char *unit;
 } ConversationWidgetNumber;
@@ -146,7 +121,6 @@ typedef struct {
     ConversationWidgetWeatherSingleDay weather_single_day;
     ConversationWidgetWeatherCurrent weather_current;
     ConversationWidgetWeatherMultiDay weather_multi_day;
-    ConversationWidgetTimer timer;
     ConversationWidgetNumber number;
     ConversationWidgetMap map;
   } widget;

@@ -20,8 +20,6 @@ function settingUpdater(session, key, value) {
     var updaters = {
         'unitSystem': updateUnitSystem,
         'responseLanguage': updateResponseLanguage,
-        'alarmVibrationPattern': updateAlarmVibrationPattern,
-        'timerVibrationPattern': updateTimerVibrationPattern,
         'quickLaunchBehaviour': updateQuickLaunchBehaviour,
         'confirmPrompts': updateConfirmPrompts,
     };
@@ -97,38 +95,6 @@ function updateResponseLanguage(session, value) {
     } else {
         console.log("Unknown response language: " + value);
         return null;
-    }
-}
-
-var vibePatternMap = {
-    'Reveille': "1",
-    'Mario': "2",
-    'Nudge Nudge': "3",
-    'Jackhammer': "4",
-    'Standard': "5",
-}
-
-function updateAlarmVibrationPattern(session, value) {
-    if (value in vibePatternMap) {
-        config.setSetting('ALARM_VIBE_PATTERN', vibePatternMap[value]);
-        session.enqueue({
-            'ALARM_VIBE_PATTERN': vibePatternMap[value]
-        });
-        return 'alarm vibration pattern to ' + value;
-    } else {
-        console.log("Unknown alarm vibration pattern: " + value);
-    }
-}
-
-function updateTimerVibrationPattern(session, value) {
-    if (value in vibePatternMap) {
-        config.setSetting('TIMER_VIBE_PATTERN', vibePatternMap[value]);
-        session.enqueue({
-            'TIMER_VIBE_PATTERN': vibePatternMap[value]
-        });
-        return 'timer vibration pattern to ' + value;
-    } else {
-        console.log("Unknown timer vibration pattern: " + value);
     }
 }
 

@@ -23,7 +23,6 @@ var actions = require('./actions');
 var widgets = require('./widgets');
 var messageQueue = require('./lib/message_queue').Queue;
 var features = require('./features');
-var tools = require('./tools');
 var telegram = require('./telegram');
 
 var package_json = require('package.json');
@@ -32,7 +31,6 @@ function Session(prompt, threadId) {
     this.prompt = prompt;
     this.threadId = threadId;
     this.hasOpenDialog = false;
-    this.pendingToolCalls = [];
     this.messageBuffer = '';
 }
 
@@ -76,12 +74,10 @@ Session.prototype.run = function() {
 
 Session.prototype.buildMessage = function() {
     var settings = getSettings();
-    var supportedActions = actions.getSupportedActions();
     var metadata = {
         tzOffset: -(new Date()).getTimezoneOffset(),
-        actions: supportedActions,
-        tools: tools.getToolDefinitions(supportedActions),
-        widgets: ['weather', 'timer', 'number'],
+        actions: actions.getSupportedActions(),
+        widgets: ['weather', 'number'],
         units: settings['UNIT_PREFERENCE'] || '',
         lang: settings['LANGUAGE_CODE'] || '',
         version: package_json['version'],
@@ -290,16 +286,6 @@ Session.prototype.handleIncomingMessage = function(message, resolve) {
                 CHAT: content
             });
         }
-    } else if (message.startsWith('f:')) {
-        if (this.hasOpenDialog) {
-            console.log('Received a tool call while a dialog is open. Closing the dialog.');
-            this.enqueue({
-                CHAT_DONE: true
-            });
-            this.hasOpenDialog = false;
-        }
-        var toolCallStr = message.substring(1);
-        this.handleToolCall(toolCallStr);
     } else if (message.startsWith('d:')) {
         this.hasOpenDialog = false;
         this.enqueue({
@@ -330,66 +316,6 @@ Session.prototype.handleIncomingMessage = function(message, resolve) {
             CHAT_DONE: true
         });
         resolve({ complete: true });
-    }
-};
-
-Session.prototype.handleToolCall = function(toolCallStr) {
-    var self = this;
-
-    try {
-        var toolCall = JSON.parse(toolCallStr);
-        var toolName = toolCall.name || (toolCall.function && toolCall.function.name);
-        var toolArgs = toolCall.arguments || (toolCall.function && toolCall.function.arguments) || {};
-        var toolCallId = toolCall.id || 'call_' + Date.now();
-
-        // Parse arguments if string
-        if (typeof toolArgs === 'string') {
-            try {
-                toolArgs = JSON.parse(toolArgs);
-            } catch (e) {
-                console.error('Failed to parse tool arguments:', toolArgs);
-            }
-        }
-
-        console.log('Tool call:', toolName, JSON.stringify(toolArgs));
-
-        // Get thought text for UI
-        var thought = tools.getToolThought(toolName, toolArgs);
-        this.enqueue({
-            FUNCTION: thought
-        });
-
-        // Execute the tool
-        tools.executeTool(toolName, toolArgs, this).then(function(result) {
-            console.log('Tool result:', JSON.stringify(result));
-
-            // Send result back to OpenClaw
-            var resultMessage = 'r:' + JSON.stringify({
-                tool_call_id: toolCallId,
-                name: toolName,
-                result: result
-            });
-
-            self.sendToOpenClaw(resultMessage).then(function() {
-                console.log('Tool result sent');
-            }).catch(function(err) {
-                console.error('Failed to send tool result:', err);
-                // Continue anyway - maybe the bot will handle it
-            });
-        }).catch(function(error) {
-            console.error('Tool execution error:', error);
-
-            // Send error back to OpenClaw
-            var errorMessage = 'r:' + JSON.stringify({
-                tool_call_id: toolCallId,
-                name: toolName,
-                result: { error: error.message || 'Tool execution failed' }
-            });
-
-            self.sendToOpenClaw(errorMessage);
-        });
-    } catch (e) {
-        console.error('Failed to handle tool call:', e);
     }
 };
 
@@ -426,7 +352,7 @@ Session.prototype.runLegacy = function() {
     }
     url += '&tzOffset=' + (-(new Date()).getTimezoneOffset());
     url += '&actions=' + actions.getSupportedActions().join(',');
-    url += '&widgets=weather,timer,number';
+    url += '&widgets=weather,number';
     if (features.FEATURE_MAP_WIDGET) {
         url += ',map';
     }
@@ -473,17 +399,6 @@ Session.prototype.handleLegacyMessage = function(event) {
                 CHAT: content
             });
         }
-    } else if (message[0] == 'f') {
-        if (this.hasOpenDialog) {
-            console.log('Received a thought while a dialog is open. Closing the dialog.');
-            this.enqueue({
-                CHAT_DONE: true
-            });
-            this.hasOpenDialog = false;
-        }
-        this.enqueue({
-            FUNCTION: message.substring(1)
-        });
     } else if (message[0] == 'd') {
         this.hasOpenDialog = false;
         this.enqueue({

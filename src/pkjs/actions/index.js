@@ -14,20 +14,11 @@
  * limitations under the License.
  */
 
-var reminders = require('./reminders');
-var alarms = require('./alarms');
 var settings = require('./settings');
 
 var actionMap = {
-    'set_reminder': reminders.setReminder,
-    'get_reminders': reminders.getReminders,
-    'delete_reminder': reminders.deleteReminder,
-    'set_alarm': alarms.setAlarm,
-    'get_alarm': alarms.getAlarm,
     'update_settings': settings.updateSettings,
 };
-
-var extraActions = ['named_alarms'];
 
 exports.handleAction = function(session, ws, actionParamString) {
     var params = JSON.parse(actionParamString);
@@ -49,5 +40,5 @@ exports.getSupportedActions = function() {
     for (var name in actionMap) {
         results.push(name);
     }
-    return results.concat(extraActions);
+    return results;
 }

@@ -168,39 +168,6 @@ static void prv_format_time(time_t when, char* buffer, size_t size) {
 static char* prv_generate_action_text(ConversationAction* action) {
   char* buffer = bmalloc(50);
   switch (action->type) {
-    case ConversationActionTypeSetAlarm: {
-      if (action->action.set_alarm.is_timer) {
-        bool deleting = action->action.set_alarm.deleted;
-        time_t now = time(NULL);
-        int duration = action->action.set_alarm.time - now;
-        int hours = duration / 3600;
-        int minutes = (duration % 3600) / 60;
-        int seconds = duration % 60;
-        if (hours > 0) {
-          snprintf(buffer, 50, deleting ? "Timer canceled with %d:%02d:%02d remaining." : "Timer set for %d:%02d:%02d.", hours, minutes, seconds);
-          return buffer;
-        } else {
-          snprintf(buffer, 50, deleting ? "Timer canceled with %d:%02d remaining." : "Timer set for %d:%02d.", minutes, seconds);
-          return buffer;
-        }
-      } else {
-        const char *verb = action->action.set_alarm.deleted ? "canceled" : "set";
-        char time_str[30];
-        prv_format_time(action->action.set_alarm.time, time_str, sizeof(time_str));
-        snprintf(buffer, 50, "Alarm %s for %s.", verb, time_str);
-        return buffer;
-      }
-      break;
-    }
-    case ConversationActionTypeSetReminder: {
-      char time_str[30];
-      prv_format_time(action->action.set_reminder.time, time_str, sizeof(time_str));
-      snprintf(buffer, 50, "Reminder set for %s.", time_str);
-      break;
-    }
-    case ConversationActionTypeDeleteReminder:
-      strncpy(buffer, "Reminder deleted.", 50);
-      break;
     case ConversationActionTypeUpdateChecklist:
       strncpy(buffer, "Checklist updated.", 50);
       break;
@@ -222,14 +189,6 @@ static uint32_t prv_get_icon_resource(ConversationEntry* entry) {
     case EntryTypeAction: {
       ConversationAction* action = conversation_entry_get_action(entry);
       switch (action->type) {
-        case ConversationActionTypeSetAlarm:
-          if (action->action.set_alarm.is_timer) {
-            return RESOURCE_ID_TIMER_ICON;
-          }
-          return RESOURCE_ID_CLOCK_ICON;
-        case ConversationActionTypeSetReminder:
-        case ConversationActionTypeDeleteReminder:
-          return RESOURCE_ID_REMINDER_ICON;
         default:
           return RESOURCE_ID_COG_ICON;
       }

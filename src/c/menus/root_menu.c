@@ -15,25 +15,20 @@
  */
 
 #include "root_menu.h"
-#include "alarm_menu.h"
 #include "about_window.h"
 #include "legal_window.h"
-#include "reminders_menu.h"
 #include "../util/style.h"
 #include "../util/memory/malloc.h"
 #include "../util/memory/sdk.h"
 #include "../util/logging.h"
 #include <pebble.h>
 
-#define NUM_MENU_ITEMS 4
+#define NUM_MENU_ITEMS 1
 
 static void prv_window_load(Window* window);
 static void prv_window_unload(Window* window);
-static void prv_push_alarm_screen(int index, void* context);
-static void prv_push_timer_screen(int index, void* context);
 static void prv_push_about_screen(int index, void* context);
 static void prv_push_legal_screen(int index, void* context);
-static void prv_push_reminders_screen(int index, void* context);
 static uint16_t prv_get_num_rows(MenuLayer *menu_layer, uint16_t section_index, void *context);
 static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell_index, void *context);
 static void prv_select_click(MenuLayer *menu_layer, MenuIndex *cell_index, void *context);
@@ -48,9 +43,6 @@ typedef struct {
 } MenuItemInfo;
 
 static MenuItemInfo s_menu_items[NUM_MENU_ITEMS] = {
-  { "Alarms", prv_push_alarm_screen, RESOURCE_ID_MENU_ICON_ALARMS, NULL },
-  { "Timers", prv_push_timer_screen, RESOURCE_ID_MENU_ICON_TIMERS, NULL },
-  { "Reminders", prv_push_reminders_screen, RESOURCE_ID_MENU_ICON_REMINDERS, NULL },
   { "About", prv_push_about_screen, RESOURCE_ID_MENU_ICON_ABOUT, NULL },
 };
 
@@ -158,20 +150,8 @@ static void prv_select_click(MenuLayer *menu_layer, MenuIndex *cell_index, void 
   s_menu_items[cell_index->row].callback((int)cell_index->row, context);
 }
 
-static void prv_push_alarm_screen(int index, void* context) {
-  alarm_menu_window_push(false);
-}
-
-static void prv_push_timer_screen(int index, void* context) {
-  alarm_menu_window_push(true);
-}
-
 static void prv_push_legal_screen(int index, void* context) {
   legal_window_push();
-}
-
-static void prv_push_reminders_screen(int index, void* context) {
-  reminders_menu_push();
 }
 
 static void prv_push_about_screen(int index, void* context) {

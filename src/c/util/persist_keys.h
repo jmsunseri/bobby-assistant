@@ -22,15 +22,6 @@
 
 // next key: 14
 
-// We write the alarm count twice - once before doing any work, and once after.
-// If they disagree we assume the lower number is correct.
-#define PERSIST_KEY_ALARM_COUNT_ONE 1
-#define PERSIST_KEY_ALARM_COUNT_TWO 2
-#define PERSIST_KEY_ALARM_TIMES 3
-#define PERSIST_KEY_ALARM_WAKEUP_IDS 4
-#define PERSIST_KEY_ALARM_IS_TIMERS 5
-#define PERSIST_KEY_ALARM_NAMES 8
-
 // Store whether we have successfully requested location consent.
 #define PERSIST_KEY_LOCATION_ENABLED 6
 
@@ -42,8 +33,6 @@
 
 // Persist keys for our settings
 #define PERSIST_KEY_QUICK_LAUNCH_BEHAVIOUR 9
-#define PERSIST_KEY_ALARM_VIBE_PATTERN 10
-#define PERSIST_KEY_TIMER_VIBE_PATTERN 11
 #define PERSIST_KEY_CONFIRM_TRANSCRIPTS 13
 
 // Store whether Telegram is connected

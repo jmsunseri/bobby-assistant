@@ -86,20 +86,11 @@ void prv_destroy_entry(ConversationEntry *entry) {
       free(entry->content.error);
       break;
     case EntryTypeAction:
-      // Only alarms and generic sentence actions need further cleanup.
       switch (entry->content.action->type) {
-        case ConversationActionTypeSetAlarm:
-          if (entry->content.action->action.set_alarm.name) {
-            free(entry->content.action->action.set_alarm.name);
-          }
-          break;
         case ConversationActionTypeGenericSentence:
           free(entry->content.action->action.generic_sentence.sentence);
           break;
-        case ConversationActionTypeSetReminder:
-        case ConversationActionTypeDeleteReminder:
         case ConversationActionTypeUpdateChecklist:
-          // These have nothing to clean up.
           break;
       }
       free(entry->content.action);
@@ -119,11 +110,6 @@ void prv_destroy_entry(ConversationEntry *entry) {
           break;
         case ConversationWidgetTypeWeatherMultiDay:
           free(entry->content.widget->widget.weather_multi_day.location);
-          break;
-        case ConversationWidgetTypeTimer:
-          if (entry->content.widget->widget.timer.name) {
-            free(entry->content.widget->widget.timer.name);
-          }
           break;
         case ConversationWidgetTypeNumber:
           free(entry->content.widget->widget.number.number);

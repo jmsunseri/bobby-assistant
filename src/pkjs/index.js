@@ -24,7 +24,6 @@ var Clay = require('@rebble/clay');
 var clayConfig = require('./config.json');
 var customConfigFunction = require('./custom_config');
 var config = require('./config');
-var reminders = require('./reminders');
 var package_json = require('package.json');
 
 
@@ -123,10 +122,6 @@ function handleAppMessage(e) {
         console.log("Starting a new Session...");
         var s = new session.Session(data.PROMPT, data.THREAD_ID);
         s.run();
-        return;
-    }
-
-    if (reminders.handleReminderMessage(data)) {
         return;
     }
 

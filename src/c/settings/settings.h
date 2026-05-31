@@ -24,18 +24,8 @@ typedef enum {
   QuickLaunchBehaviourHomeScreen = 3,
 } QuickLaunchBehaviour;
 
-typedef enum {
-  VibePatternSettingReveille = 1,
-  VibePatternSettingMario = 2,
-  VibePatternSettingNudgeNudge = 3,
-  VibePatternSettingJackhammer = 4,
-  VibePatternSettingStandard = 5,
-} VibePatternSetting;
-
 void settings_init();
 void settings_deinit();
 QuickLaunchBehaviour settings_get_quick_launch_behaviour();
-VibePatternSetting settings_get_alarm_vibe_pattern();
-VibePatternSetting settings_get_timer_vibe_pattern();
 bool settings_get_should_confirm_transcripts();
 bool settings_is_telegram_connected();

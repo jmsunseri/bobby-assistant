@@ -172,11 +172,6 @@
           "type": "raw"
         },
         {
-          "file": "icons_clock.pdc",
-          "name": "CLOCK_ICON",
-          "type": "raw"
-        },
-        {
           "file": "icons_cog.pdc",
           "name": "COG_ICON",
           "type": "raw"
@@ -187,18 +182,8 @@
           "type": "raw"
         },
         {
-          "file": "icons_reminder.pdc",
-          "name": "REMINDER_ICON",
-          "type": "raw"
-        },
-        {
           "file": "icons_skull.pdc",
           "name": "SKULL_ICON",
-          "type": "raw"
-        },
-        {
-          "file": "icons_timer.pdc",
-          "name": "TIMER_ICON",
           "type": "raw"
         },
         {
@@ -210,16 +195,6 @@
           "file": "animations_running_pony.pdcs",
           "name": "RUNNING_LOBSTER",
           "type": "raw"
-        },
-        {
-          "file": "images_icons_action_bar_snooze.png",
-          "name": "ACTION_BAR_SNOOZE",
-          "type": "bitmap"
-        },
-        {
-          "file": "images_icons_action_bar_x.png",
-          "name": "ACTION_BAR_X",
-          "type": "bitmap"
         },
         {
           "file": "images_failed_pony.pdc",
@@ -350,66 +325,6 @@
         {
           "file": "images_icons_menu_about_bw.png",
           "name": "MENU_ICON_ABOUT",
-          "type": "bitmap",
-          "memoryFormat": "1Bit",
-          "targetPlatforms": [
-            "diorite"
-          ]
-        },
-        {
-          "file": "images_icons_menu_alarms.png",
-          "name": "MENU_ICON_ALARMS",
-          "type": "bitmap",
-          "memoryFormat": "SmallestPalette",
-          "targetPlatforms": [
-            "basalt",
-            "chalk",
-            "emery"
-          ]
-        },
-        {
-          "file": "images_icons_menu_alarms_bw.png",
-          "name": "MENU_ICON_ALARMS",
-          "type": "bitmap",
-          "memoryFormat": "1Bit",
-          "targetPlatforms": [
-            "diorite"
-          ]
-        },
-        {
-          "file": "images_icons_menu_reminders.png",
-          "name": "MENU_ICON_REMINDERS",
-          "type": "bitmap",
-          "memoryFormat": "SmallestPalette",
-          "targetPlatforms": [
-            "basalt",
-            "chalk",
-            "emery"
-          ]
-        },
-        {
-          "file": "images_icons_menu_reminders_bw.png",
-          "name": "MENU_ICON_REMINDERS",
-          "type": "bitmap",
-          "memoryFormat": "1Bit",
-          "targetPlatforms": [
-            "diorite"
-          ]
-        },
-        {
-          "file": "images_icons_menu_timers.png",
-          "name": "MENU_ICON_TIMERS",
-          "type": "bitmap",
-          "memoryFormat": "SmallestPalette",
-          "targetPlatforms": [
-            "basalt",
-            "chalk",
-            "emery"
-          ]
-        },
-        {
-          "file": "images_icons_menu_timers_bw.png",
-          "name": "MENU_ICON_TIMERS",
           "type": "bitmap",
           "memoryFormat": "1Bit",
           "targetPlatforms": [

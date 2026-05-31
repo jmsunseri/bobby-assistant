@@ -40,7 +40,6 @@ static void prv_handle_app_message_outbox_failed(DictionaryIterator *iterator, A
 static void prv_handle_app_message_inbox_received(DictionaryIterator *iterator, void *context);
 static void prv_handle_app_message_inbox_dropped(AppMessageResult result, void *context);
 static void prv_process_weather_widget(int widget_type, DictionaryIterator *iter, ConversationManager *manager);
-static void prv_process_timer_widget(int widget_type, DictionaryIterator *iter, ConversationManager *manager);
 static void prv_process_highlight_widget(int widget_type, DictionaryIterator *iter, ConversationManager *manager);
 #if ENABLE_FEATURE_MAPS
 static void prv_process_map_widget(int widget_type, DictionaryIterator *iter, ConversationManager *manager);
@@ -182,24 +181,6 @@ static void prv_handle_app_message_inbox_received(DictionaryIterator *iter, void
         conversation_add_error(manager->conversation, tuple->value->cstring);
         prv_conversation_updated(manager, true);
       }
-    } else if (tuple->key == MESSAGE_KEY_ACTION_REMINDER_WAS_SET) {
-      // Setting reminders is handled by the phone, so we don't have any logic here for it.
-      // We pick this up here so we can add a note about it to the session view.
-      ConversationAction action = {
-        .type = ConversationActionTypeSetReminder,
-        .action = {
-          .set_reminder = {
-            .time = tuple->value->int32,
-          },
-        },
-      };
-      conversation_manager_add_action(manager, &action);
-    } else if (tuple->key == MESSAGE_KEY_ACTION_REMINDER_DELETED) {
-      ConversationAction action = {
-        .type = ConversationActionTypeDeleteReminder,
-        .action = {},
-      };
-      conversation_manager_add_action(manager, &action);
     } else if (tuple->key == MESSAGE_KEY_ACTION_SETTINGS_UPDATED) {
       char *sentence = bmalloc(strlen(tuple->value->cstring) + 1);
       strcpy(sentence, tuple->value->cstring);
@@ -221,10 +202,6 @@ static void prv_handle_app_message_inbox_received(DictionaryIterator *iter, void
       conversation_complete_response(manager->conversation);
       prv_conversation_updated(manager, false);
       prv_process_weather_widget(tuple->value->int32, iter, manager);
-    } else if (tuple->key == MESSAGE_KEY_TIMER_WIDGET) {
-      conversation_complete_response(manager->conversation);
-      prv_conversation_updated(manager, false);
-      prv_process_timer_widget(tuple->value->int32, iter, manager);
     } else if (tuple->key == MESSAGE_KEY_HIGHLIGHT_WIDGET) {
       conversation_complete_response(manager->conversation);
       prv_conversation_updated(manager, false);
@@ -360,33 +337,6 @@ static void prv_process_weather_widget(int widget_type, DictionaryIterator *iter
       break;
     }
   }
-}
-
-static void prv_process_timer_widget(int widget_type, DictionaryIterator *iter, ConversationManager *manager) {
-  Tuple *time_tuple = dict_find(iter, MESSAGE_KEY_TIMER_WIDGET_TARGET_TIME);
-  if (!time_tuple) {
-    CLAWD_LOG(APP_LOG_LEVEL_WARNING, "Missing TIMER_WIDGET_TARGET_TIME");
-    return;
-  }
-  time_t target_time = time_tuple->value->int32;
-  char *name_stored = NULL;
-  Tuple *tuple = dict_find(iter, MESSAGE_KEY_TIMER_WIDGET_NAME);
-  if (tuple) {
-    const char *name = tuple->value->cstring;
-    name_stored = bmalloc(strlen(name) + 1);
-    strcpy(name_stored, name);
-  }
-  ConversationWidget widget = {
-    .type = ConversationWidgetTypeTimer,
-    .widget = {
-      .timer = {
-        .target_time = target_time,
-        .name = name_stored,
-      }
-    }
-  };
-  conversation_add_widget(manager->conversation, &widget);
-  prv_conversation_updated(manager, true);
 }
 
 static void prv_process_highlight_widget(int widget_type, DictionaryIterator *iter, ConversationManager *manager) {

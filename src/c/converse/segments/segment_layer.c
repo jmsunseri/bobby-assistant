@@ -22,7 +22,6 @@
 #include "widgets/weather_current.h"
 #include "widgets/weather_multi_day.h"
 #include "widgets/number.h"
-#include "widgets/timer.h"
 #include "widgets/map.h"
 #include "../../util/memory/sdk.h"
 #include "../../util/logging.h"
@@ -42,7 +41,6 @@ typedef enum {
   SegmentTypeWeatherSingleDayWidget,
   SegmentTypeWeatherCurrentWidget,
   SegmentTypeWeatherMultiDayWidget,
-  SegmentTypeTimerWidget,
   SegmentTypeNumberWidget,
 #if ENABLE_FEATURE_MAPS
   SegmentTypeMapWidget,
@@ -63,7 +61,6 @@ typedef struct {
     WeatherSingleDayWidget* weather_single_day_widget;
     WeatherCurrentWidget* weather_current_widget;
     WeatherMultiDayWidget* weather_multi_day_widget;
-    TimerWidget* timer_widget;
     NumberWidget* number_widget;
 #if ENABLE_FEATURE_MAPS
     MapWidget* map_widget;
@@ -105,9 +102,6 @@ SegmentLayer* segment_layer_create(GRect rect, ConversationEntry* entry, bool as
     case SegmentTypeWeatherMultiDayWidget:
       data->weather_multi_day_widget = weather_multi_day_widget_create(child_frame, entry);
       break;
-    case SegmentTypeTimerWidget:
-      data->timer_widget = timer_widget_create(child_frame, entry);
-      break;
     case SegmentTypeNumberWidget:
       data->number_widget = number_widget_create(child_frame, entry);
       break;
@@ -147,9 +141,6 @@ void segment_layer_destroy(SegmentLayer* layer) {
       break;
     case SegmentTypeWeatherMultiDayWidget:
       weather_multi_day_widget_destroy(data->weather_multi_day_widget);
-      break;
-    case SegmentTypeTimerWidget:
-      timer_widget_destroy(data->timer_widget);
       break;
     case SegmentTypeNumberWidget:
       number_widget_destroy(data->number_widget);
@@ -191,9 +182,6 @@ void segment_layer_update(SegmentLayer* layer) {
     case SegmentTypeWeatherMultiDayWidget:
       weather_multi_day_widget_update(data->weather_multi_day_widget);
       break;
-    case SegmentTypeTimerWidget:
-      timer_widget_update(data->timer_widget);
-      break;
     case SegmentTypeNumberWidget:
       number_widget_update(data->number_widget);
       break;
@@ -231,8 +219,6 @@ static SegmentType prv_get_segment_type(ConversationEntry* entry) {
           return SegmentTypeWeatherCurrentWidget;
         case ConversationWidgetTypeWeatherMultiDay:
           return SegmentTypeWeatherMultiDayWidget;
-        case ConversationWidgetTypeTimer:
-          return SegmentTypeTimerWidget;
         case ConversationWidgetTypeNumber:
           return SegmentTypeNumberWidget;
 #if ENABLE_FEATURE_MAPS
