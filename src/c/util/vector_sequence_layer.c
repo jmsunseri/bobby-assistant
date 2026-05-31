@@ -45,6 +45,7 @@ void vector_sequence_layer_destroy(VectorSequenceLayer *layer) {
   VectorSequenceLayerData *data = layer_get_data(layer);
   if (data->timer) {
     app_timer_cancel(data->timer);
+    data->timer = NULL;
   }
   layer_destroy(vector_sequence_layer_get_layer(layer));
 }
@@ -73,6 +74,7 @@ void vector_sequence_layer_play(VectorSequenceLayer *layer) {
   VectorSequenceLayerData *data = layer_get_data(layer);
   if (data->timer) {
     app_timer_cancel(data->timer);
+    data->timer = NULL;
   }
 
   GDrawCommandFrame *frame = gdraw_command_sequence_get_frame_by_index(data->sequence, 0);
@@ -83,6 +85,7 @@ void vector_sequence_layer_stop(VectorSequenceLayer *layer) {
   VectorSequenceLayerData *data = layer_get_data(layer);
   if (data->timer) {
     app_timer_cancel(data->timer);
+    data->timer = NULL;
   }
 }
 
@@ -107,6 +110,7 @@ static void prv_timer_callback(void *context) {
       next_frame = 0;
       data->play_count++;
     } else {
+      data->timer = NULL;
       return;
     }
   }

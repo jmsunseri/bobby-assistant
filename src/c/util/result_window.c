@@ -142,6 +142,7 @@ static void prv_window_appear(Window* window) {
   ResultWindowData* data = window_get_user_data(window);
   if (data->timer) {
     app_timer_cancel(data->timer);
+    data->timer = NULL;
   }
   data->timer = app_timer_register(4000, prv_timer_expired, window);
 }

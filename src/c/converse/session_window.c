@@ -509,6 +509,7 @@ static void prv_refresh_timeout(SessionWindow* sw) {
   }
   if (sw->timeout_handle) {
     app_timer_cancel(sw->timeout_handle);
+    sw->timeout_handle = NULL;
   }
   CLAWD_LOG(APP_LOG_LEVEL_DEBUG, "Refreshed timeout");
   sw->timeout_handle = app_timer_register(sw->timeout, prv_timed_out, sw);

@@ -62,6 +62,10 @@ void sad_vibe_score_play(SadVibeScore* score) {
 }
 
 void sad_vibe_score_stop() {
+  if (s_timer) {
+    app_timer_cancel(s_timer);
+    s_timer = NULL;
+  }
   if (s_active_vibe_score) {
     vibes_cancel();
     s_active_vibe_score = NULL;
@@ -69,6 +73,7 @@ void sad_vibe_score_stop() {
 }
 
 static void prv_vibe_timer_callback(void* context) {
+  s_timer = NULL;
   if (s_active_vibe_score) {
     sad_vibe_score_play(s_active_vibe_score);
   }
