@@ -39,20 +39,26 @@ MessageLayer* message_layer_create(GRect rect, ConversationEntry* entry) {
     Layer* layer = blayer_create_with_data(rect, sizeof(MessageLayerData));
     MessageLayerData* data = layer_get_data(layer);
     data->entry = entry;
-    data->speaker_layer = btext_layer_create(GRect(5, 0, rect.size.w, NAME_HEIGHT));
-    size_t content_origin_y = -5;
-    EntryType type = conversation_entry_get_type(entry);
-    if (type == EntryTypePrompt) {
-      text_layer_set_text(data->speaker_layer, "You");
-      content_origin_y = NAME_HEIGHT;
-    }
-    layer_add_child(layer, (Layer *)data->speaker_layer);
+  data->speaker_layer = btext_layer_create(GRect(5, 0, rect.size.w, NAME_HEIGHT));
+  size_t content_origin_y = -5;
+  EntryType type = conversation_entry_get_type(entry);
+  if (type == EntryTypePrompt) {
+    text_layer_set_text(data->speaker_layer, "You");
+    content_origin_y = NAME_HEIGHT;
+  }
+#ifdef PBL_PLATFORM_GABBRO
+  text_layer_set_text_alignment(data->speaker_layer, GTextAlignmentCenter);
+#endif
+  layer_add_child(layer, (Layer *)data->speaker_layer);
     data->last_newline_offset = 0;
     data->content_height = 24;
     data->content_height = prv_get_content_height(layer);
     data->content_layer = btext_layer_create(GRect(5, content_origin_y, rect.size.w - 10, data->content_height));
     text_layer_set_text(data->content_layer, prv_get_content_text(layer));
     text_layer_set_font(data->content_layer, fonts_get_system_font(CONTENT_FONT));
+#ifdef PBL_PLATFORM_GABBRO
+    text_layer_set_text_alignment(data->content_layer, GTextAlignmentCenter);
+#endif
     data->content_height = text_layer_get_content_size(data->content_layer).h;
     layer_add_child(layer, (Layer *)data->content_layer);
     message_layer_update(layer);
@@ -110,6 +116,9 @@ static int prv_get_content_height(MessageLayer* layer) {
   // This algorithm is somewhat buggy (it can't cope with words getting broken; it assumes only one break per
   // fragment), so for content where speed is less important just actually measure the thing.
   GTextAlignment alignment = GTextAlignmentLeft;
+#ifdef PBL_PLATFORM_GABBRO
+  alignment = GTextAlignmentCenter;
+#endif
   if (conversation_entry_get_type(data->entry) != EntryTypeResponse || conversation_entry_get_response(data->entry)->complete) {
     return graphics_text_layout_get_content_size(text, font, rect, GTextOverflowModeTrailingEllipsis, alignment).h;
   }

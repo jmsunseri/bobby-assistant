@@ -31,6 +31,14 @@
 #define STAGE_OPENCLAW_CONSENT 1
 #define STAGE_LOCATION_CONSENT 2
 
+#ifdef PBL_PLATFORM_GABBRO
+#define TEXT_PADDING 20
+#define TEXT_ALIGNMENT GTextAlignmentCenter
+#else
+#define TEXT_PADDING 10
+#define TEXT_ALIGNMENT GTextAlignmentLeft
+#endif
+
 typedef struct {
   ScrollLayer *scroll_layer;
   TextLayer *title_layer;
@@ -102,8 +110,9 @@ static void prv_window_load(Window *window) {
   data->title_layer = btext_layer_create(GRect(0, 0, window_bounds.size.w, 30));
   text_layer_set_text_alignment(data->title_layer, GTextAlignmentCenter);
   text_layer_set_font(data->title_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  data->text_layer = btext_layer_create(GRect(10, 30, window_bounds.size.w - 20, window_bounds.size.h - 30));
+  data->text_layer = btext_layer_create(GRect(TEXT_PADDING, 30, window_bounds.size.w - TEXT_PADDING * 2, window_bounds.size.h - 30));
   text_layer_set_font(data->text_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24));
+  text_layer_set_text_alignment(data->text_layer, TEXT_ALIGNMENT);
   data->select_indicator_bitmap = bgbitmap_create_with_resource(RESOURCE_ID_BUTTON_INDICATOR);
   data->select_indicator_layer = bbitmap_layer_create(
     GRect(window_bounds.size.w - 5, window_bounds.size.h / 2 - 10, 5, 20));
@@ -191,9 +200,9 @@ static void prv_set_stage(Window* window, int stage) {
   GSize text_size = graphics_text_layout_get_content_size(
     data->current_text,
     fonts_get_system_font(FONT_KEY_GOTHIC_24),
-    GRect(10, 30, window_size.w - 20, 1000),
+    GRect(TEXT_PADDING, 30, window_size.w - TEXT_PADDING * 2, 1000),
     GTextOverflowModeWordWrap,
-    GTextAlignmentLeft);
+    TEXT_ALIGNMENT);
   text_size.h += 5;
   text_layer_set_size(data->text_layer, text_size);
   scroll_layer_set_content_size(data->scroll_layer, GSize(window_size.w, 33 + text_size.h));

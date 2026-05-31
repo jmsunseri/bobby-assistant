@@ -80,6 +80,9 @@ SegmentLayer* segment_layer_create(GRect rect, ConversationEntry* entry, bool as
     data->assistant_label_layer = btext_layer_create(GRect(5, 0, rect.size.w, NAME_HEIGHT));
     layer_add_child(layer, text_layer_get_layer(data->assistant_label_layer));
     text_layer_set_text(data->assistant_label_layer, "Clawd");
+#ifdef PBL_PLATFORM_GABBRO
+    text_layer_set_text_alignment(data->assistant_label_layer, GTextAlignmentCenter);
+#endif
     child_frame = GRect(0, NAME_HEIGHT, rect.size.w, rect.size.h - NAME_HEIGHT);
   } else {
     data->assistant_label_layer = NULL;

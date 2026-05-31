@@ -48,12 +48,17 @@ InfoLayer* info_layer_create(GRect rect, ConversationEntry* entry) {
     data->icon = NULL;
     data->content_text = NULL;
     data->content_height = 24;
-    data->content_height = prv_get_content_height(layer);
-    data->content_layer = btext_layer_create(GRect(STRIPE_WIDTH + TEXT_PADDING_LEFT, 1, rect.size.w - UNAVAILABLE_WIDTH, data->content_height));
-    text_layer_set_text(data->content_layer, prv_get_content_text(layer));
-    text_layer_set_font(data->content_layer, fonts_get_system_font(CONTENT_FONT));
-    text_layer_set_background_color(data->content_layer, GColorClear);
-    text_layer_set_text_alignment(data->content_layer, GTextAlignmentLeft);
+  data->content_height = prv_get_content_height(layer);
+#ifdef PBL_PLATFORM_GABBRO
+  data->content_layer = btext_layer_create(GRect(0, 1, rect.size.w, data->content_height));
+  text_layer_set_text_alignment(data->content_layer, GTextAlignmentCenter);
+#else
+  data->content_layer = btext_layer_create(GRect(STRIPE_WIDTH + TEXT_PADDING_LEFT, 1, rect.size.w - UNAVAILABLE_WIDTH, data->content_height));
+  text_layer_set_text_alignment(data->content_layer, GTextAlignmentLeft);
+#endif
+  text_layer_set_text(data->content_layer, prv_get_content_text(layer));
+  text_layer_set_font(data->content_layer, fonts_get_system_font(CONTENT_FONT));
+  text_layer_set_background_color(data->content_layer, GColorClear);
     data->content_height = text_layer_get_content_size(data->content_layer).h;
     layer_add_child(layer, (Layer *)data->content_layer);
     info_layer_update(layer);
@@ -120,17 +125,24 @@ static char *prv_get_content_text(InfoLayer *layer) {
 static int prv_get_content_height(InfoLayer* layer) {
   char* text = prv_get_content_text(layer);
   const GFont font = fonts_get_system_font(CONTENT_FONT);
-  const GRect rect = GRect(0, 0, layer_get_frame(layer).size.w - UNAVAILABLE_WIDTH, 10000);
+#ifdef PBL_PLATFORM_GABBRO
+  const GRect rect = GRect(0, 0, layer_get_frame(layer).size.w, 10000);
   GTextAlignment alignment = GTextAlignmentCenter;
+#else
+  const GRect rect = GRect(0, 0, layer_get_frame(layer).size.w - UNAVAILABLE_WIDTH, 10000);
+  GTextAlignment alignment = GTextAlignmentLeft;
+#endif
   return graphics_text_layout_get_content_size(text, font, rect, GTextOverflowModeTrailingEllipsis, alignment).h;
 }
 
 static void prv_layer_render(Layer* layer, GContext* ctx) {
   InfoLayerData* data = layer_get_data(layer);
   GRect bounds = layer_get_bounds(layer);
+#ifndef PBL_PLATFORM_GABBRO
   GColor stripe_color = prv_get_stripe_color(data->entry);
   graphics_context_set_fill_color(ctx, stripe_color);
   graphics_fill_rect(ctx, GRect(0, 0, STRIPE_WIDTH, bounds.size.h), 0, GCornerNone);
+#endif
   graphics_context_set_stroke_color(ctx, GColorBlack);
   graphics_draw_line(ctx, GPoint(0, 0), GPoint(bounds.size.w, 0));
   graphics_draw_line(ctx, GPoint(0, bounds.size.h - 1), GPoint(bounds.size.w, bounds.size.h - 1));
