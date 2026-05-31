@@ -22,7 +22,7 @@
 
 
 #define CONTENT_FONT FONT_KEY_GOTHIC_24_BOLD
-#define NAME_HEIGHT 15
+#define NAME_HEIGHT 20
 
 typedef struct {
   ConversationEntry* entry;
