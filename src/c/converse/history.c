@@ -38,6 +38,39 @@ void history_set_thread_id(const char* thread_id) {
   CLAWD_LOG(APP_LOG_LEVEL_INFO, "History thread ID: %s", thread_id);
 }
 
+static void prv_shift_if_full(void) {
+  if (s_count <= HISTORY_MAX_ENTRIES) return;
+  int shift = s_count - HISTORY_MAX_ENTRIES;
+  for (int i = 0; i < HISTORY_MAX_ENTRIES; i++) {
+    if (i + shift < s_count) {
+      s_entries[i] = s_entries[i + shift];
+    }
+  }
+  s_count = HISTORY_MAX_ENTRIES;
+}
+
+void history_push_prompt(const char* text) {
+  prv_shift_if_full();
+  s_entries[s_count].type = HistoryEntryTypePrompt;
+  strncpy(s_entries[s_count].text, text, sizeof(s_entries[s_count].text) - 1);
+  s_entries[s_count].text[sizeof(s_entries[s_count].text) - 1] = '\0';
+  s_count++;
+  CLAWD_LOG(APP_LOG_LEVEL_INFO, "History push prompt %d: %.50s", s_count, text);
+}
+
+void history_push_response(const char* text) {
+  prv_shift_if_full();
+  s_entries[s_count].type = HistoryEntryTypeResponse;
+  strncpy(s_entries[s_count].text, text, sizeof(s_entries[s_count].text) - 1);
+  s_entries[s_count].text[sizeof(s_entries[s_count].text) - 1] = '\0';
+  s_count++;
+  CLAWD_LOG(APP_LOG_LEVEL_INFO, "History push response %d: %.50s", s_count, text);
+}
+
+void history_push_thread_id(const char* thread_id) {
+  history_set_thread_id(thread_id);
+}
+
 void history_set_done(void) {
   s_done = true;
   CLAWD_LOG(APP_LOG_LEVEL_INFO, "History done. %d entries.", s_count);

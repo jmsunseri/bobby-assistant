@@ -377,6 +377,10 @@ static void prv_conversation_manager_handler(bool entry_added, void* context) {
       segment_layer_update(layer);
       int new_height = layer_get_frame(layer).size.h;
       sw->content_height = sw->content_height - old_height + new_height;
+      ConversationEntry* entry = segment_layer_get_entry(layer);
+      if (conversation_entry_get_type(entry) == EntryTypeResponse && conversation_entry_get_response(entry)->complete) {
+        history_push_response(conversation_entry_get_response(entry)->response);
+      }
       prv_update_thinking_layer(sw);
       prv_set_scroll_height(sw);
       light_enable_interaction();
@@ -426,7 +430,12 @@ static void prv_conversation_manager_handler(bool entry_added, void* context) {
   sw->content_height += layer_height;
   EntryType entry_type = conversation_entry_get_type(entry);
   if (entry_type == EntryTypePrompt) {
+    history_push_prompt(conversation_entry_get_prompt(entry)->prompt);
     sw->last_prompt_end_offset = prv_content_height(sw);
+  } else if (entry_type == EntryTypeResponse) {
+    if (conversation_entry_get_response(entry)->complete) {
+      history_push_response(conversation_entry_get_response(entry)->response);
+    }
   }
   prv_update_thinking_layer(sw);
   prv_set_scroll_height(sw);

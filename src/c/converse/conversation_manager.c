@@ -17,6 +17,7 @@
 #include "conversation_manager.h"
 
 #include "conversation.h"
+#include "history.h"
 #include "../util/memory/malloc.h"
 #include "../util/memory/pressure.h"
 #include "../util/logging.h"
@@ -169,6 +170,7 @@ static void prv_handle_app_message_inbox_received(DictionaryIterator *iter, void
       prv_conversation_updated(manager, false);
     } else if (tuple->key == MESSAGE_KEY_THREAD_ID) {
       conversation_set_thread_id(manager->conversation, tuple->value->cstring);
+      history_push_thread_id(tuple->value->cstring);
     } else if (tuple->key == MESSAGE_KEY_CLOSE_WAS_CLEAN) {
       if (!tuple->value->int16) {
         conversation_complete_response(manager->conversation);
