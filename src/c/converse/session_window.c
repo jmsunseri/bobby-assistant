@@ -241,6 +241,7 @@ static void prv_window_appear(Window *window) {
       }
     }
     sw->load_history = false;
+    sw->dictation_pending = false;
     GSize holder_size = scroll_layer_get_content_size(sw->scroll_layer);
     for (int i = 0; i < count; i++) {
       ConversationEntry* conv_entry = conversation_entry_at_index(conv, i);

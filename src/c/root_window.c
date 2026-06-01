@@ -190,16 +190,14 @@ static void prv_prompt_clicked(ClickRecognizerRef recognizer, void *context) {
 
 static void prv_more_clicked(ClickRecognizerRef recognizer, void* context) {
   RootWindow* rw = context;
-  ActionMenuLevel *level = baction_menu_level_create(2);
-  action_menu_level_add_action(level, "About", prv_menu_about, NULL);
   char **suggestions;
   int count = prv_load_suggestions(&suggestions);
-  ActionMenuLevel *sample_level = baction_menu_level_create(count);
+  ActionMenuLevel *level = baction_menu_level_create(1 + count);
+  action_menu_level_add_action(level, "About", prv_menu_about, NULL);
   for (int i = 0; i < count; ++i) {
-    action_menu_level_add_action(sample_level, suggestions[i], prv_suggestion_clicked, rw);
+    action_menu_level_add_action(level, suggestions[i], prv_suggestion_clicked, rw);
   }
   rw->sample_prompts = suggestions;
-  action_menu_level_add_action(level, "Sample Questions", NULL, sample_level);
   ActionMenuConfig config = (ActionMenuConfig) {
     .root_level = level,
     .colors = {
