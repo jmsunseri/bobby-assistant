@@ -103,7 +103,7 @@ function fetchAndSendHistory() {
                 messageQueue.enqueue({ HISTORY_THREAD_ID: threadId });
             }
 
-            for (var k = 0; k < historyEntries.length; k++) {
+            for (var k = historyEntries.length - 1; k >= 0; k--) {
                 var entry = historyEntries[k];
                 if (entry.type === 'prompt') {
                     messageQueue.enqueue({ HISTORY_PROMPT: entry.text });
