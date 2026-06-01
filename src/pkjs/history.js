@@ -1,4 +1,5 @@
 var messageQueue = require('./lib/message_queue').Queue;
+var bundleLoader = require('./lib/bundle_loader');
 var telegram = require('./telegram');
 
 var HISTORY_LIMIT = 4;
@@ -6,6 +7,14 @@ var HISTORY_LIMIT = 4;
 function fetchAndSendHistory() {
     if (!telegram.hasSession()) {
         console.log('[history] No Telegram session, skipping history fetch');
+        sendHistoryDone();
+        return;
+    }
+
+    bundleLoader.ensureTelegramBundle();
+
+    if (typeof TelegramClient === 'undefined') {
+        console.log('[history] TelegramClient not available after bundle load');
         sendHistoryDone();
         return;
     }
