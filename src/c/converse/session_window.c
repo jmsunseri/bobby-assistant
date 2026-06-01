@@ -18,6 +18,7 @@
 
 #include "conversation.h"
 #include "conversation_manager.h"
+#include "history.h"
 #include "segments/segment_layer.h"
 #include "../settings/settings.h"
 #include "../util/thinking_layer.h"
@@ -65,6 +66,8 @@ struct SessionWindow {
   int timeout;
   char* starting_prompt;
   char* last_prompt_label;
+  char* thread_id;
+  bool load_history;
 };
 
 static void prv_window_load(Window *window);
@@ -75,6 +78,7 @@ static void prv_destroy(SessionWindow *sw);
 static void prv_dictation_status_callback(DictationSession *session, DictationSessionStatus status, char *transcription, void *context);
 static void prv_conversation_manager_handler(bool entry_added, void* context);
 static void prv_conversation_entry_deleted_handler(int index, void* context);
+static void prv_set_scroll_height(SessionWindow* sw);
 static void prv_click_config_provider(void *context);
 static void prv_select_clicked(ClickRecognizerRef recognizer, void *context);
 static void prv_select_long_pressed(ClickRecognizerRef recognizer, void *context);
@@ -89,9 +93,12 @@ static void prv_action_menu_input(ActionMenu *action_menu, const ActionMenuItem 
 static void prv_start_dictation(SessionWindow *sw);
 
 void session_window_push(int timeout, char *starting_prompt) {
+  session_window_push_with_history(timeout, starting_prompt, NULL);
+}
+
+void session_window_push_with_history(int timeout, char *starting_prompt, const char *thread_id) {
   // Check if Telegram is connected
   if (!settings_is_telegram_connected()) {
-    // Show error message telling user to configure Telegram
     result_window_push("Oops!", "Please configure Telegram in the app settings to use Clawd.", NULL, BRANDED_BACKGROUND_COLOUR);
     return;
   }
@@ -105,6 +112,11 @@ void session_window_push(int timeout, char *starting_prompt) {
   if (starting_prompt != NULL) {
     sw->starting_prompt = bmalloc(strlen(starting_prompt) + 1);
     strncpy(sw->starting_prompt, starting_prompt, strlen(starting_prompt) + 1);
+  }
+  if (thread_id != NULL) {
+    sw->thread_id = bmalloc(strlen(thread_id) + 1);
+    strncpy(sw->thread_id, thread_id, strlen(thread_id) + 1);
+    sw->load_history = true;
   }
   window_set_window_handlers(window, (WindowHandlers) {
       .load = prv_window_load,
@@ -136,6 +148,9 @@ static void prv_destroy(SessionWindow *sw) {
   window_destroy(sw->window);
   if (sw->starting_prompt) {
     free(sw->starting_prompt);
+  }
+  if (sw->thread_id) {
+    free(sw->thread_id);
   }
   free(sw);
 }
@@ -209,6 +224,45 @@ static void prv_window_load(Window *window) {
 
 static void prv_window_appear(Window *window) {
   SessionWindow *sw = (SessionWindow *)window_get_user_data(window);
+  if (sw->thread_id) {
+    conversation_set_thread_id(conversation_manager_get_conversation(sw->manager), sw->thread_id);
+    free(sw->thread_id);
+    sw->thread_id = NULL;
+  }
+  if (sw->load_history && history_is_available()) {
+    Conversation* conv = conversation_manager_get_conversation(sw->manager);
+    int count = history_get_count();
+    for (int i = 0; i < count; i++) {
+      const HistoryEntry* entry = history_get_entry(i);
+      if (entry->type == HistoryEntryTypePrompt) {
+        conversation_add_prompt(conv, entry->text);
+      } else if (entry->type == HistoryEntryTypeResponse) {
+        conversation_add_response(conv, entry->text);
+      }
+    }
+    sw->load_history = false;
+    GSize holder_size = scroll_layer_get_content_size(sw->scroll_layer);
+    for (int i = 0; i < count; i++) {
+      ConversationEntry* conv_entry = conversation_entry_at_index(conv, i);
+      bool is_last = (i == count - 1);
+      bool assistant_label = (conversation_entry_get_type(conv_entry) == EntryTypeResponse) && is_last;
+      SegmentLayer* layer = segment_layer_create(GRect(SEGMENT_X, prv_content_height(sw), holder_size.w - SEGMENT_W_PADDING, 10), conv_entry, assistant_label);
+      sw->segment_layers[sw->segment_count++] = layer;
+      if (sw->segment_count >= sw->segment_space) {
+        SegmentLayer** new_block = bmalloc(sizeof(SegmentLayer*) * ++sw->segment_space);
+        memcpy(new_block, sw->segment_layers, sizeof(SegmentLayer*) * sw->segment_count);
+        free(sw->segment_layers);
+        sw->segment_layers = new_block;
+      }
+      GRect frame = layer_get_frame(layer);
+      frame.origin.y = prv_content_height(sw);
+      layer_set_frame(layer, frame);
+      scroll_layer_add_child(sw->scroll_layer, layer);
+      int layer_height = layer_get_frame(layer).size.h;
+      sw->content_height += layer_height;
+    }
+    prv_set_scroll_height(sw);
+  }
   if (sw->starting_prompt) {
     conversation_manager_add_input(sw->manager, sw->starting_prompt);
     sw->query_time = time(NULL);

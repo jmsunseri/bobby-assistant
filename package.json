@@ -95,7 +95,11 @@
       "TELEGRAM_SEND_CODE",
       "TELEGRAM_DISCONNECT",
       "TELEGRAM_PENDING_ACTION",
-      "OPENCLAW_BOT"
+      "OPENCLAW_BOT",
+      "HISTORY_PROMPT",
+      "HISTORY_RESPONSE",
+      "HISTORY_THREAD_ID",
+      "HISTORY_DONE"
     ],
     "resources": {
       "media": [

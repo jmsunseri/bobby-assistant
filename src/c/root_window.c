@@ -20,6 +20,7 @@
 #include "root_window.h"
 #include "talking_lobster_layer.h"
 #include "converse/session_window.h"
+#include "converse/history.h"
 #include "menus/about_window.h"
 #include "util/logging.h"
 #include "util/style.h"
@@ -163,26 +164,11 @@ static void prv_click_config_provider(void *context) {
 }
 
 static void prv_up_clicked(ClickRecognizerRef recognizer, void *context) {
-  RootWindow* rw = context;
-  // talking_lobster_layer_set_text(rw->talking_lobster_layer, "I'm doing thanks! How help?");
-  char **suggestions;
-  int count = prv_load_suggestions(&suggestions);
-  ActionMenuLevel *level = baction_menu_level_create(count);
-  for (int i = 0; i < count; ++i) {
-    action_menu_level_add_action(level, suggestions[i], prv_suggestion_clicked, rw);
+  if (history_is_available()) {
+    session_window_push_with_history(0, NULL, history_get_thread_id());
+  } else {
+    session_window_push(0, NULL);
   }
-  ActionMenuConfig config = (ActionMenuConfig) {
-    .root_level = level,
-    .colors = {
-      .background = BRANDED_BACKGROUND_COLOUR,
-      .foreground = gcolor_legible_over(BRANDED_BACKGROUND_COLOUR),
-    },
-    .align = ActionMenuAlignTop,
-    .context = rw,
-    .did_close = prv_action_menu_closed,
-  };
-  rw->sample_prompts = suggestions;
-  action_menu_open(&config);
 }
 
 static void prv_action_menu_closed(ActionMenu *action_menu, const ActionMenuItem *performed_action, void *context) {
@@ -203,8 +189,17 @@ static void prv_prompt_clicked(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void prv_more_clicked(ClickRecognizerRef recognizer, void* context) {
-  ActionMenuLevel *level = baction_menu_level_create(1);
+  RootWindow* rw = context;
+  ActionMenuLevel *level = baction_menu_level_create(2);
   action_menu_level_add_action(level, "About", prv_menu_about, NULL);
+  char **suggestions;
+  int count = prv_load_suggestions(&suggestions);
+  ActionMenuLevel *sample_level = baction_menu_level_create(count);
+  for (int i = 0; i < count; ++i) {
+    action_menu_level_add_action(sample_level, suggestions[i], prv_suggestion_clicked, rw);
+  }
+  rw->sample_prompts = suggestions;
+  action_menu_level_add_action(level, "Sample Questions", NULL, sample_level);
   ActionMenuConfig config = (ActionMenuConfig) {
     .root_level = level,
     .colors = {
@@ -212,7 +207,8 @@ static void prv_more_clicked(ClickRecognizerRef recognizer, void* context) {
       .foreground = gcolor_legible_over(BRANDED_BACKGROUND_COLOUR),
     },
     .align = ActionMenuAlignTop,
-    .context = NULL,
+    .context = rw,
+    .did_close = prv_action_menu_closed,
   };
   action_menu_open(&config);
 }

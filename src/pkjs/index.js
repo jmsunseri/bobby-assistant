@@ -20,6 +20,7 @@ var ensureTelegramBundle = bundleLoader.ensureTelegramBundle;
 var location = require('./location');
 var session = require('./session');
 var telegram = require('./telegram');
+var history = require('./history');
 var Clay = require('@rebble/clay');
 var clayConfig = require('./config.json');
 var customConfigFunction = require('./custom_config');
@@ -32,6 +33,7 @@ var clay = new Clay(clayConfig, customConfigFunction);
 function main() {
     location.update();
     sendTelegramStatus();
+    history.fetchAndSendHistory();
     Pebble.addEventListener('appmessage', handleAppMessage);
 }
 
@@ -74,6 +76,7 @@ function handleTelegramProvideCode(action) {
         if (result.success) {
             telegram.resetClient();
             clearTelegramCodeField();
+            history.fetchAndSendHistory();
         }
         sendTelegramStatus();
     }).catch(function(err) {

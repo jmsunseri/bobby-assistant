@@ -22,6 +22,7 @@
 typedef struct SessionWindow SessionWindow;
 
 void session_window_push(int timeout, char *starting_prompt);
+void session_window_push_with_history(int timeout, char *starting_prompt, const char *thread_id);
 void session_window_destroy(SessionWindow* window);
 
 #endif

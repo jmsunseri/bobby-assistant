@@ -19,6 +19,7 @@
 #include "consent/consent.h"
 #include "converse/session_window.h"
 #include "converse/conversation_manager.h"
+#include "converse/history.h"
 #include "image_manager/image_manager.h"
 #include "version/version.h"
 #include "settings/settings.h"
@@ -33,16 +34,33 @@
 #define QUICK_LAUNCH_TIMEOUT_MS 60000
 
 static RootWindow* s_root_window = NULL;
+static EventHandle s_history_handle;
+
+static void prv_history_message_handler(DictionaryIterator *iter, void *context) {
+  for (Tuple *tuple = dict_read_first(iter); tuple; tuple = dict_read_next(iter)) {
+    if (tuple->key == MESSAGE_KEY_HISTORY_PROMPT) {
+      history_add_prompt(tuple->value->cstring);
+    } else if (tuple->key == MESSAGE_KEY_HISTORY_RESPONSE) {
+      history_add_response(tuple->value->cstring);
+    } else if (tuple->key == MESSAGE_KEY_HISTORY_THREAD_ID) {
+      history_set_thread_id(tuple->value->cstring);
+    } else if (tuple->key == MESSAGE_KEY_HISTORY_DONE) {
+      history_set_done();
+    }
+  }
+}
 
 static void prv_init(void) {
   memory_pressure_init();
   version_init();
   consent_migrate();
   settings_init();
+  history_init();
   conversation_manager_init();
 #if ENABLE_FEATURE_IMAGE_MANAGER
   image_manager_init();
 #endif
+  s_history_handle = events_app_message_register_inbox_received(prv_history_message_handler, NULL);
   events_app_message_open();
 }
 
@@ -50,6 +68,7 @@ static void prv_deinit(void) {
   if (s_root_window) {
     root_window_destroy(s_root_window);
   }
+  events_app_message_unsubscribe(s_history_handle);
 #ifdef ENABLE_FEATURE_IMAGE_MANAGER
   image_manager_deinit();
 #endif
