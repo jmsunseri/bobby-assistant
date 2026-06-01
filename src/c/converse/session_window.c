@@ -263,6 +263,11 @@ static void prv_window_appear(Window *window) {
       sw->content_height += layer_height;
     }
     prv_set_scroll_height(sw);
+    GSize content_size = scroll_layer_get_content_size(sw->scroll_layer);
+    GRect scroll_frame = layer_get_frame(scroll_layer_get_layer(sw->scroll_layer));
+    int scroll_target = -(content_size.h - scroll_frame.size.h);
+    if (scroll_target > 0) scroll_target = 0;
+    scroll_layer_set_content_offset(sw->scroll_layer, GPoint(0, scroll_target), false);
   }
   if (sw->starting_prompt) {
     conversation_manager_add_input(sw->manager, sw->starting_prompt);
@@ -495,9 +500,12 @@ static void prv_click_config_provider(void *context) {
 
 static void prv_select_clicked(ClickRecognizerRef recognizer, void *context) {
   SessionWindow* sw = context;
-  if (conversation_is_idle(conversation_manager_get_conversation(sw->manager))) {
-    prv_start_dictation(sw);
+  Conversation* conv = conversation_manager_get_conversation(sw->manager);
+  ConversationEntry* entry = conversation_peek(conv);
+  if (entry && conversation_entry_get_type(entry) == EntryTypeResponse && !conversation_entry_get_response(entry)->complete) {
+    return;
   }
+  prv_start_dictation(sw);
 }
 
 static void prv_destroy_action_menu(ActionMenu *action_menu, const ActionMenuItem *item, void *context) {

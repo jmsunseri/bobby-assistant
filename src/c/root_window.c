@@ -185,7 +185,11 @@ static void prv_suggestion_clicked(ActionMenu *action_menu, const ActionMenuItem
 }
 
 static void prv_prompt_clicked(ClickRecognizerRef recognizer, void *context) {
-  session_window_push(0, NULL);
+  if (history_is_available()) {
+    session_window_push_with_history(0, NULL, history_get_thread_id());
+  } else {
+    session_window_push(0, NULL);
+  }
 }
 
 static void prv_more_clicked(ClickRecognizerRef recognizer, void* context) {
