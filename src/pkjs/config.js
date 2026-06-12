@@ -19,51 +19,53 @@
  * Client-side configuration - no backend needed.
  */
 
-exports.getSettings = function() {
-    return JSON.parse(localStorage.getItem('clay-settings')) || {};
+exports.getSettings = function () {
+  return JSON.parse(localStorage.getItem("clay-settings")) || {};
 };
 
-exports.setSetting = function(key, value) {
-    var settings = exports.getSettings();
-    settings[key] = value;
-    localStorage.setItem('clay-settings', JSON.stringify(settings));
+exports.setSetting = function (key, value) {
+  var settings = exports.getSettings();
+  settings[key] = value;
+  localStorage.setItem("clay-settings", JSON.stringify(settings));
 };
 
-exports.isLocationEnabled = function() {
-    return !!exports.getSettings()['LOCATION_ENABLED'];
+exports.isLocationEnabled = function () {
+  return !!exports.getSettings()["LOCATION_ENABLED"];
 };
 
 /**
  * Get the OpenClaw bot username.
  * @returns {string}
  */
-exports.getBotUsername = function() {
-    var username = localStorage.getItem('openclaw_bot_username');
-    if (!username) {
-        var settings = exports.getSettings();
-        username = settings['OPENCLAW_BOT'] || '@OpenClawBot';
-    }
-    if (username && !username.startsWith('@')) {
-        username = '@' + username;
-    }
-    return username || '@OpenClawBot';
+exports.getBotUsername = function () {
+  var username = localStorage.getItem("openclaw_bot_username");
+  if (!username) {
+    var settings = exports.getSettings();
+    username = settings["OPENCLAW_BOT"] || "@OpenClawBot";
+  }
+  if (username && !username.startsWith("@")) {
+    username = "@" + username;
+  }
+  return username || "@OpenClawBot";
 };
 
 /**
  * Set the OpenClaw bot username.
  * @param {string} username
  */
-exports.setBotUsername = function(username) {
-    if (username && !username.startsWith('@')) {
-        username = '@' + username;
-    }
-    localStorage.setItem('openclaw_bot_username', username);
+exports.setBotUsername = function (username) {
+  if (username && !username.startsWith("@")) {
+    username = "@" + username;
+  }
+  localStorage.setItem("openclaw_bot_username", username);
 };
 
 /**
  * Check if Telegram is connected.
  * @returns {boolean}
  */
-exports.isTelegramConnected = function() {
-    return !!localStorage.getItem('telegram_session');
+exports.isTelegramConnected = function () {
+  return !!localStorage.getItem("telegram_session");
 };
+
+var o = 1;
