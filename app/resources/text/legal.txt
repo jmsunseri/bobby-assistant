@@ -1,17 +1,20 @@
 # Legal
-## Gemini
-AI processing is provided by Google's Gemini under the terms at https://ai.google.dev/gemini-api/terms (Bobby is a 'paid service').
+## AI processing
+AI processing is provided by Cloudflare Workers AI. Requests are sent directly from your phone to Cloudflare using the account and API token you configured. The Cloudflare terms that apply are at https://www.cloudflare.com/website-terms/ and the Workers AI terms at https://developers.cloudflare.com/workers-ai/platform/terms/.
 
 ## Weather
-Weather data provided by The Weather Channel.
+Weather data is provided by Open-Meteo (https://open-meteo.com/).
 
-## Wikipedia
-Some grounding information is fetched from Wikipedia during request processing. Wikipedia content is available under the Creative Commons Attribution-ShareAlike License.
+## Web search
+Web results are provided by Brave Search (https://brave.com/search/api/).
 
-## Currency Data
+## Currency data
 Exchange rate data is provided by Exchange Rate API (https://www.exchangerate-api.com/).
 
+## Maps and geocoding
+Place-name geocoding is optionally provided by Mapbox (https://www.mapbox.com/).
+
 ## Disclaimers
-Bobby includes experimental technology and may sometimes provide inaccurate or offensive content that doesn't represent Rebble's views.
+Bobby includes experimental technology and may sometimes provide inaccurate or offensive content.
 Use discretion before relying on, publishing, or otherwise using content provided by Bobby.
 Don't rely on Bobby for medical, legal, financial, or other professional advice. Any content regarding those topics is provided for informational purposes only and is not a substitute for advice from a qualified professional. Content does not constitute medical treatment or diagnosis.

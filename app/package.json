@@ -19,6 +19,34 @@
       "configurable",
       "location"
     ],
+    "usesPermissions": [
+      {
+        "name": "Location",
+        "reason": "To answer questions about where you are",
+        "required": false
+      },
+      {
+        "name": "Timeline",
+        "reason": "To add reminders to your timeline",
+        "required": false
+      },
+      {
+        "name": "Internet",
+        "parameters": {
+          "domains": [
+            "api.cloudflare.com",
+            "api.search.brave.com",
+            "api.open-meteo.com",
+            "geocoding-api.open-meteo.com",
+            "v6.exchangerate-api.com",
+            "api.mapbox.com",
+            "timeline-api.rebble.io"
+          ]
+        },
+        "reason": "To run the AI models and the optional tools",
+        "required": true
+      }
+    ],
     "targetPlatforms": [
       "basalt",
       "diorite",
@@ -116,7 +144,9 @@
       "CONSENT_PAGE_INDEX",
       "CONSENT_PAGE_TITLE",
       "CONSENT_PAGE_TEXT",
-      "CONSENT_ERROR"
+      "CONSENT_ERROR",
+      "OPEN_ISSUES",
+      "NEW_CHAT"
     ],
     "resources": {
       "media": [

@@ -1,0 +1,10 @@
+{
+  "name": "bobby-local-agent",
+  "private": true,
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.5"
+  }
+}

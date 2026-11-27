@@ -93,9 +93,16 @@ var CONDITION_MAP = {
     "SUN": WEATHER_CONDITION_SUN
 }
 
+function resolveCondition(params, fallbackCondition) {
+    if (params && params['condition_name'] && CONDITION_MAP[params['condition_name']]) {
+        return CONDITION_MAP[params['condition_name']];
+    }
+    var condInt = INTEGERS_TO_CONDITIONS[fallbackCondition];
+    return CONDITION_MAP[condInt];
+}
+
 exports.singleDay = function(session, params) {
-    var condInt = INTEGERS_TO_CONDITIONS[params['condition']];
-    var condition = CONDITION_MAP[condInt];
+    var condition = resolveCondition(params, params['condition']);
 
     console.log("Sending widget data...");
     session.enqueue({
@@ -111,8 +118,7 @@ exports.singleDay = function(session, params) {
 }
 
 exports.current = function(session, params) {
-    var condInt = INTEGERS_TO_CONDITIONS[params['condition']];
-    var condition = CONDITION_MAP[condInt];
+    var condition = resolveCondition(params, params['condition']);
 
     console.log("Sending widget data...");
     session.enqueue({
@@ -135,8 +141,7 @@ exports.multiDay = function(session, params) {
     }
     for (var i = 0; i < 3; ++i) {
         var day = params['days'][i];
-        var condInt = INTEGERS_TO_CONDITIONS[day['condition']];
-        var condition = CONDITION_MAP[condInt];
+        var condition = resolveCondition(day, day['condition']);
         message[messageKeys.WEATHER_WIDGET_MULTI_DAY + i] = day['day'].substring(0, 3).toUpperCase();
         message[messageKeys.WEATHER_WIDGET_MULTI_HIGH + i] = day['high'];
         message[messageKeys.WEATHER_WIDGET_MULTI_LOW + i] = day['low'];

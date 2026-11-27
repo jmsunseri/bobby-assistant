@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-var message_keys = require('message_keys');
+var message_keys = null;
+
+function getMessageKeys() {
+    if (!message_keys) {
+        message_keys = require('message_keys');
+    }
+    return message_keys;
+}
 
 function setAlarm(session, message, callback) {
     var time = message['time'];
@@ -41,11 +48,11 @@ function setAlarm(session, message, callback) {
     }
     console.log("Trying to set " + (isTimer ? "timer" : "alarm") + " for " + unixTime + " (" + time + ")");
     
-    var timeout = setTimeout(2000, function() {
+    var timeout = setTimeout(function() {
         console.log("Timed out, returning error message.");
         callback({"error": "Timed out waiting for a response from the watch."});
         cleanup();
-    });
+    }, 2000);
     
     var cleanup = function() {
         console.log("Cleaning up alarm handling.");
@@ -110,15 +117,16 @@ function setAlarm(session, message, callback) {
 }
 
 function getAlarm(session, message, callback) {
+    var keys = getMessageKeys();
     var isTimer = message['isTimer'];
     console.log("Getting " + (isTimer ? "timers" : "alarms") + "...");
 
 
-    var timeout = setTimeout(2000, function() {
+    var timeout = setTimeout(function() {
         console.log("Timed out, returning error message.");
         callback({"error": "Timed out waiting for a response from the watch."});
         cleanup();
-    });
+    }, 2000);
 
     var cleanup = function() {
         console.log("Cleaning up alarm handling.");
@@ -138,7 +146,7 @@ function getAlarm(session, message, callback) {
 
     var handleMessage = function(event) {
         var data = event.payload;
-        if (!(message_keys.GET_ALARM_RESULT in data)) {
+        if (!(keys.GET_ALARM_RESULT in data)) {
             return;
         }
         console.log("got response from watch");
@@ -146,10 +154,10 @@ function getAlarm(session, message, callback) {
         var resp = [];
         obj[isTimer ? "timers": "alarms"] = resp;
         var watchTime = data.CURRENT_TIME;
-        var count = data[message_keys.GET_ALARM_RESULT];
+        var count = data[keys.GET_ALARM_RESULT];
         for (var i = 0; i < count; ++i) {
-            var alarmTime = data[message_keys.GET_ALARM_RESULT + i + 1];
-            var alarmName = data[message_keys.GET_ALARM_NAME + i + 1] || null;
+            var alarmTime = data[keys.GET_ALARM_RESULT + i + 1];
+            var alarmName = data[keys.GET_ALARM_NAME + i + 1] || null;
             if (isTimer) {
                 var secondsLeft = alarmTime - watchTime;
                 var formattedTimeLeft = "";
