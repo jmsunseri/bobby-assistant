@@ -50,7 +50,8 @@
     "targetPlatforms": [
       "basalt",
       "diorite",
-      "emery"
+      "emery",
+      "gabbro"
     ],
     "watchapp": {
       "watchface": false
@@ -357,7 +358,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -375,7 +377,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -393,7 +396,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -411,7 +415,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -429,7 +434,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -447,7 +453,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -465,7 +472,8 @@
           "type": "bitmap",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -514,7 +522,8 @@
           "memoryFormat": "2BitPalette",
           "targetPlatforms": [
             "basalt",
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -541,7 +550,8 @@
           "name": "FONT_GOTHIC_36",
           "type": "raw",
           "targetPlatforms": [
-            "emery"
+            "emery",
+            "gabbro"
           ]
         },
         {
@@ -549,7 +559,8 @@
           "name": "FONT_GOTHIC_36_BOLD",
           "type": "raw",
           "targetPlatforms": [
-            "emery"
+            "emery",
+            "gabbro"
           ]
         }
       ]
