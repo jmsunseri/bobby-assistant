@@ -160,7 +160,7 @@ exports.thought = function(name) {
     if (tool && tool.thought) {
         return tool.thought();
     }
-    return 'Working on it…';
+    return 'Working on it...';
 };
 
 exports.all = TOOLS;

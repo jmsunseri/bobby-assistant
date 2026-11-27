@@ -41,6 +41,33 @@ describe('extract field policy', () => {
     expect(issues).toHaveLength(0);
   });
 
+  it('accepts a typed datetime even when the exact-value confidence is low', () => {
+    const tool = {
+      fields: { time: { type: 'datetime' } },
+      required: ['time']
+    };
+    const issues = extract.checkFields(tool, {
+      time: { value: '2026-11-28T06:00:00', p_null: 0.0037, confidence: 0.44 }
+    });
+    expect(issues).toHaveLength(0);
+  });
+
+  it('drops a low-confidence optional text field', () => {
+    const tool = {
+      fields: {
+        time: { type: 'datetime' },
+        name: { type: 'text' }
+      },
+      required: ['time']
+    };
+    const args = extract.buildArgs(tool, {
+      time: { value: '2026-11-28T06:00:00', p_null: 0.0037, confidence: 0.44 },
+      name: { value: 'Six a', p_null: 0.37, confidence: 0.22 }
+    });
+    expect(args.name).toBeUndefined();
+    expect(args.time).toBe('2026-11-28T06:00:00');
+  });
+
   it('coerces numbers and trims text', () => {
     const args = extract.buildArgs(tool, {
       duration_minutes: { value: '10' },

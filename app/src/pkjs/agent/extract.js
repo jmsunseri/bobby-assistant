@@ -10,7 +10,17 @@ var cloudflare = require('./cloudflare');
 var log = require('./log');
 
 var NULL_THRESHOLD = 0.15;
-var CONFIDENCE_THRESHOLD = 0.80;
+var CONFIDENCE_THRESHOLD = 0.50;
+var TYPED_FIELDS = {
+    date: true,
+    time: true,
+    datetime: true,
+    duration: true
+};
+
+function isTyped(spec) {
+    return !!(spec && TYPED_FIELDS[spec.type]);
+}
 
 function isMissing(field, answers) {
     var answer = answers[field];
@@ -18,6 +28,21 @@ function isMissing(field, answers) {
         return true;
     }
     return answer.value === null || typeof answer.value === 'undefined';
+}
+
+function isUncertain(spec, answer) {
+    var pNull = typeof answer.p_null === 'number' ? answer.p_null : 0;
+    if (pNull > NULL_THRESHOLD) {
+        return true;
+    }
+    // Typed answers (date/time/datetime/duration) carry a guess and report the
+    // probability of that exact guess, which is naturally low for clock times.
+    // p_null is the meaningful signal there; don't demand 80% on "six a.m.".
+    if (isTyped(spec)) {
+        return false;
+    }
+    var confidence = typeof answer.confidence === 'number' ? answer.confidence : 1;
+    return confidence < CONFIDENCE_THRESHOLD;
 }
 
 function coerce(field, spec, value) {
@@ -46,15 +71,13 @@ function checkFields(tool, answers) {
             continue;
         }
         var answer = answers[field];
-        var pNull = typeof answer.p_null === 'number' ? answer.p_null : 0;
-        var confidence = typeof answer.confidence === 'number' ? answer.confidence : 1;
-        if (pNull > NULL_THRESHOLD || confidence < CONFIDENCE_THRESHOLD) {
+        if (isUncertain(spec, answer)) {
             issues.push({
                 field: field,
                 reason: 'uncertain',
                 spec: spec,
-                pNull: pNull,
-                confidence: confidence
+                pNull: typeof answer.p_null === 'number' ? answer.p_null : 0,
+                confidence: answer.confidence
             });
         }
     }
@@ -64,12 +87,18 @@ function checkFields(tool, answers) {
 function buildArgs(tool, answers) {
     var args = {};
     var fields = tool.fields || {};
+    var required = tool.required || [];
     for (var field in fields) {
         if (!fields.hasOwnProperty(field)) {
             continue;
         }
         var answer = answers[field];
         if (!answer || answer.value === null || typeof answer.value === 'undefined') {
+            continue;
+        }
+        // Optional fields still need to clear the same bar, otherwise a noisy
+        // "Six a" comes back as the alarm's name.
+        if (required.indexOf(field) === -1 && isUncertain(fields[field], answer)) {
             continue;
         }
         args[field] = coerce(field, fields[field], answer.value);

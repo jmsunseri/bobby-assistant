@@ -22,7 +22,7 @@ var MAX_TEXT = 900;
 function truncate(text, limit) {
     var value = String(text || '').replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
     if (value.length > (limit || MAX_TEXT)) {
-        value = value.substring(0, (limit || MAX_TEXT) - 1) + '…';
+        value = value.substring(0, (limit || MAX_TEXT) - 1) + '...';
     }
     return value;
 }

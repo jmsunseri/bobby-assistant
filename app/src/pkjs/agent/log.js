@@ -23,7 +23,7 @@ function scrub(value, depth) {
         return value;
     }
     if (typeof value === 'string') {
-        return value.length > 2000 ? value.substring(0, 2000) + '…' : value;
+        return value.length > 2000 ? value.substring(0, 2000) + '...' : value;
     }
     if (typeof value !== 'object') {
         return value;
@@ -34,7 +34,7 @@ function scrub(value, depth) {
             arr.push(scrub(value[i], depth + 1));
         }
         if (value.length > 20) {
-            arr.push('[…' + (value.length - 20) + ' more]');
+            arr.push('[...' + (value.length - 20) + ' more]');
         }
         return arr;
     }

@@ -32,7 +32,7 @@ module.exports = {
     required: [],
     requiresKeys: [],
     thought: function() {
-        return 'Checking the time…';
+        return 'Checking the time...';
     },
     run: function(args, ctx, callback) {
         var now = new Date();

@@ -296,7 +296,7 @@ exports.weather = {
     required: [],
     requiresKeys: [],
     thought: function() {
-        return 'Checking the weather…';
+        return 'Checking the weather...';
     },
     run: run
 };

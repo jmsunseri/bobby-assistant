@@ -114,7 +114,7 @@ exports.setReminder = {
     required: ['what', 'when'],
     requiresKeys: [],
     thought: function() {
-        return 'Setting a reminder…';
+        return 'Setting a reminder...';
     },
     run: setReminder
 };
@@ -127,7 +127,7 @@ exports.getReminders = {
     required: [],
     requiresKeys: [],
     thought: function() {
-        return 'Checking your reminders…';
+        return 'Checking your reminders...';
     },
     run: getReminders
 };
@@ -145,7 +145,7 @@ exports.deleteReminder = {
     required: ['what'],
     requiresKeys: [],
     thought: function() {
-        return 'Deleting the reminder…';
+        return 'Deleting the reminder...';
     },
     run: deleteReminder
 };

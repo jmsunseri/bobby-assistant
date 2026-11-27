@@ -72,7 +72,7 @@ exports.websearch = {
     requiresKeys: ['BRAVE_API_KEY'],
     alwaysSynthesis: true,
     thought: function() {
-        return 'Searching the web…';
+        return 'Searching the web...';
     },
     run: run
 };

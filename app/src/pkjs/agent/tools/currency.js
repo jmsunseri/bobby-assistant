@@ -106,7 +106,7 @@ exports.currency = {
     required: ['from', 'to'],
     requiresKeys: ['EXCHANGE_RATE_API_KEY'],
     thought: function() {
-        return 'Converting currency…';
+        return 'Converting currency...';
     },
     run: run
 };

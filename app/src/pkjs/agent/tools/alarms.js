@@ -7,15 +7,28 @@ var actions = require('../../actions/alarms');
 var timeTool = require('./time');
 
 function minutesLabel(minutes) {
-    var value = Math.round(minutes);
-    if (value < 60) {
-        return value + (value === 1 ? ' minute' : ' minutes');
+    var totalSeconds = Math.round(minutes * 60);
+    if (totalSeconds < 60) {
+        return totalSeconds + (totalSeconds === 1 ? ' second' : ' seconds');
     }
-    var hours = Math.floor(value / 60);
-    var rest = value % 60;
-    var label = hours + (hours === 1 ? ' hour' : ' hours');
-    if (rest) {
-        label += ' ' + rest + (rest === 1 ? ' minute' : ' minutes');
+    var hours = Math.floor(totalSeconds / 3600);
+    var mins = Math.floor((totalSeconds % 3600) / 60);
+    var secs = totalSeconds % 60;
+    var label = '';
+    if (hours) {
+        label += hours + (hours === 1 ? ' hour' : ' hours');
+    }
+    if (mins) {
+        if (label) {
+            label += ' ';
+        }
+        label += mins + (mins === 1 ? ' minute' : ' minutes');
+    }
+    if (secs) {
+        if (label) {
+            label += ' ';
+        }
+        label += secs + (secs === 1 ? ' second' : ' seconds');
     }
     return label;
 }
@@ -224,7 +237,7 @@ exports.setTimer = {
     required: ['duration_minutes'],
     requiresKeys: [],
     thought: function(args) {
-        return 'Setting a timer…';
+        return 'Setting a timer...';
     },
     run: setTimer
 };
@@ -243,7 +256,7 @@ exports.setAlarm = {
     required: ['time'],
     requiresKeys: [],
     thought: function() {
-        return 'Setting an alarm…';
+        return 'Setting an alarm...';
     },
     run: setAlarm
 };
@@ -256,7 +269,7 @@ exports.getTimers = {
     required: [],
     requiresKeys: [],
     thought: function() {
-        return 'Checking your timers…';
+        return 'Checking your timers...';
     },
     run: getTimers
 };
@@ -269,7 +282,7 @@ exports.getAlarms = {
     required: [],
     requiresKeys: [],
     thought: function() {
-        return 'Checking your alarms…';
+        return 'Checking your alarms...';
     },
     run: getAlarms
 };
@@ -282,7 +295,7 @@ exports.cancelTimer = {
     required: [],
     requiresKeys: [],
     thought: function() {
-        return 'Cancelling the timer…';
+        return 'Cancelling the timer...';
     },
     run: cancelTimer
 };
@@ -295,7 +308,7 @@ exports.cancelAlarm = {
     required: [],
     requiresKeys: [],
     thought: function() {
-        return 'Cancelling the alarm…';
+        return 'Cancelling the alarm...';
     },
     run: cancelAlarm
 };
