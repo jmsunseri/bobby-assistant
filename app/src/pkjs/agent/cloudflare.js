@@ -147,8 +147,16 @@ exports.chat = function(modelId, messages, tools, callback) {
 };
 
 exports.clef = function(state, questions, callback) {
-    runRaw('@cf/cloudflare/clef-flash', {
-        model: 'clef-flash',
+    runClef('@cf/cloudflare/clef-flash', 'clef-flash', state, questions, callback);
+};
+
+exports.clefFull = function(state, questions, callback) {
+    runClef('@cf/cloudflare/clef', 'clef', state, questions, callback);
+};
+
+function runClef(modelId, modelName, state, questions, callback) {
+    runRaw(modelId, {
+        model: modelName,
         state: state,
         questions: questions
     }, function(err, result) {
@@ -162,7 +170,7 @@ exports.clef = function(state, questions, callback) {
         }
         callback(null, result);
     });
-};
+}
 
 exports.clairic = function(state, fields, referenceDate, callback) {
     var body = {

@@ -1,8 +1,8 @@
 /**
- * Clef-flash router.
+ * Clef router.
  *
- * Clef picks a tool (or chat/multi) and tells us whether the answer needs
- * prose. Everything here is pure so it can be tested without a network.
+ * clef-flash handles the hot path. If it is not confident about a tool, full
+ * Clef gets one cheap second opinion before we fall back to the chat model.
  */
 
 var cloudflare = require('./cloudflare');
@@ -44,7 +44,7 @@ function buildQuestions(toolCriteria) {
     return {
         tool: {
             type: 'choice',
-            instructions: 'Which option should handle the user\'s request? Pick exactly one.',
+            instructions: 'Which option should handle the current user request? The current request is the last "User:" line in the state. Use earlier turns only to resolve references such as "that" or "six a"; do not let them change the task.',
             criteria: toolCriteria
         },
         needs_synthesis: {
@@ -54,6 +54,34 @@ function buildQuestions(toolCriteria) {
     };
 }
 
+function evaluate(result, toolCriteria) {
+    var answers = result.answers || {};
+    var toolAnswer = answers.tool || {};
+    var probabilities = toolAnswer.probabilities || {};
+    var choice = toolAnswer.choice || 'chat';
+    var confidence = typeof toolAnswer.confidence === 'number' ? toolAnswer.confidence : 0;
+    var decision = chooseKind(choice, probabilities, confidence);
+    var synthesisAnswer = answers.needs_synthesis || {};
+    var needsSynthesis = typeof synthesisAnswer.noul === 'number' ? synthesisAnswer.noul >= 0.5 : false;
+
+    if (decision.kind === 'tool' && !toolCriteria[choice]) {
+        decision = { kind: 'chat', reason: 'unknown-tool' };
+    }
+
+    decision.tool = choice;
+    decision.probabilities = probabilities;
+    decision.confidence = confidence;
+    decision.needsSynthesis = needsSynthesis;
+    return decision;
+}
+
+function shouldAskFullClef(decision) {
+    return decision.kind === 'chat' &&
+        decision.reason === 'low-confidence' &&
+        decision.tool !== 'chat' &&
+        decision.tool !== 'multi';
+}
+
 exports.decide = function(state, toolCriteria, callback) {
     var questions = buildQuestions(toolCriteria);
     cloudflare.clef(state, questions, function(err, result) {
@@ -61,25 +89,31 @@ exports.decide = function(state, toolCriteria, callback) {
             callback(err);
             return;
         }
-        var answers = result.answers || {};
-        var toolAnswer = answers.tool || {};
-        var probabilities = toolAnswer.probabilities || {};
-        var choice = toolAnswer.choice || 'chat';
-        var confidence = typeof toolAnswer.confidence === 'number' ? toolAnswer.confidence : 0;
-        var decision = chooseKind(choice, probabilities, confidence);
-        var synthesisAnswer = answers.needs_synthesis || {};
-        var needsSynthesis = typeof synthesisAnswer.noul === 'number' ? synthesisAnswer.noul >= 0.5 : false;
+        var flashDecision = evaluate(result, toolCriteria);
+        flashDecision.via = 'clef-flash';
+        log.info('router.decision', flashDecision);
 
-        if (decision.kind === 'tool' && !toolCriteria[choice]) {
-            decision = { kind: 'chat', reason: 'unknown-tool' };
+        if (!shouldAskFullClef(flashDecision)) {
+            callback(null, flashDecision);
+            return;
         }
 
-        decision.tool = choice;
-        decision.probabilities = probabilities;
-        decision.confidence = confidence;
-        decision.needsSynthesis = needsSynthesis;
-        log.info('router.decision', decision);
-        callback(null, decision);
+        cloudflare.clefFull(state, questions, function(fullErr, fullResult) {
+            if (fullErr) {
+                log.warn('router.tiebreak.failed', fullErr);
+                callback(null, flashDecision);
+                return;
+            }
+            var fullDecision = evaluate(fullResult, toolCriteria);
+            fullDecision.via = 'clef';
+            fullDecision.flash = {
+                tool: flashDecision.tool,
+                topProbability: flashDecision.topProbability,
+                margin: flashDecision.margin
+            };
+            log.info('router.tiebreak', fullDecision);
+            callback(null, fullDecision);
+        });
     });
 };
 
@@ -87,3 +121,5 @@ exports.TOOL_THRESHOLD = TOOL_THRESHOLD;
 exports.CHAT_MARGIN = CHAT_MARGIN;
 exports.chooseKind = chooseKind;
 exports.buildQuestions = buildQuestions;
+exports.evaluate = evaluate;
+exports.shouldAskFullClef = shouldAskFullClef;

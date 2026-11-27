@@ -45,6 +45,24 @@ describe('router thresholds', () => {
     expect(router.chooseKind('chat', { chat: 0.99 }, 0.99).kind).toBe('chat');
     expect(router.chooseKind('multi', { multi: 0.8 }, 0.8).kind).toBe('multi');
   });
+
+  it('only asks full Clef when flash is unsure about a tool', () => {
+    expect(router.shouldAskFullClef({
+      kind: 'chat',
+      reason: 'low-confidence',
+      tool: 'set_timer'
+    })).toBe(true);
+    expect(router.shouldAskFullClef({
+      kind: 'chat',
+      reason: 'low-confidence',
+      tool: 'chat'
+    })).toBe(false);
+    expect(router.shouldAskFullClef({
+      kind: 'tool',
+      reason: 'confident',
+      tool: 'set_timer'
+    })).toBe(false);
+  });
 });
 
 describe('clef questions', () => {

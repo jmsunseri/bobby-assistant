@@ -145,10 +145,54 @@ describe('agent fast path', () => {
     expect(frames[frames.length - 1]).toBe('d');
   });
 
+  it('asks full Clef before falling back when flash is unsure', async () => {
+    let fullCalls = 0;
+    global.__fakeXHR = (method, url) => {
+      if (url.indexOf('clef-flash') !== -1) {
+        return clefAnswer('set_timer', { set_timer: 0.40, chat: 0.30 });
+      }
+      if (url.indexOf('/ai/run/@cf/cloudflare/clef') !== -1) {
+        fullCalls++;
+        return clefAnswer('time', { time: 0.95, chat: 0.02 });
+      }
+      throw new Error('unexpected request ' + url);
+    };
+    const frames = await turn('what time is it?');
+    expect(fullCalls).toBe(1);
+    expect(textOf(frames)).toContain('It\'s');
+    expect(frames[frames.length - 1]).toBe('d');
+  });
+
+  it('does not make a second LLM call after a deterministic tool result', async () => {
+    let chatCalls = 0;
+    global.__fakeXHR = (method, url) => {
+      if (url.indexOf('clef-flash') !== -1) {
+        return clefAnswer('set_timer', { set_timer: 0.40, chat: 0.30 });
+      }
+      if (url.indexOf('/ai/run/@cf/cloudflare/clef') !== -1) {
+        return clefAnswer('set_timer', { set_timer: 0.40, chat: 0.30 });
+      }
+      chatCalls++;
+      return {
+        body: {
+          success: true,
+          result: { tool_calls: [{ name: 'time', arguments: {} }] }
+        }
+      };
+    };
+    const frames = await turn('what time is it?');
+    expect(chatCalls).toBe(1);
+    expect(textOf(frames)).toContain('It\'s');
+    expect(frames[frames.length - 1]).toBe('d');
+  });
+
   it('falls back to chat when routing is uncertain', async () => {
     global.__fakeXHR = (method, url) => {
       if (url.indexOf('clef-flash') !== -1) {
         return clefAnswer('weather', { weather: 0.5, chat: 0.45 });
+      }
+      if (url.indexOf('/ai/run/@cf/cloudflare/clef') !== -1) {
+        return clefAnswer('chat', { chat: 0.90 });
       }
       return {
         body: {

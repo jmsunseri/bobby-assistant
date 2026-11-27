@@ -109,7 +109,8 @@ function synthesisMessages(prompt, tool, result) {
     }];
 }
 
-function runChat(opts, ctx, callback) {
+function runChat(opts, ctx, options, callback) {
+    options = options || {};
     var messages = [{ role: 'system', content: systemPrompt(ctx) }].concat(history.recentMessages(10));
     var schemas = tools.chatTools();
     var model = settings.getModelId();
@@ -127,6 +128,7 @@ function runChat(opts, ctx, callback) {
             if (response.toolCalls && response.toolCalls.length) {
                 var call = response.toolCalls[0];
                 var args = call.arguments || {};
+                var tool = tools.get(call.name);
                 log.info('chat.tool', { round: round, call: call });
                 opts.emit('f' + tools.thought(call.name));
                 messages.push({
@@ -134,6 +136,14 @@ function runChat(opts, ctx, callback) {
                     content: JSON.stringify({ name: call.name, arguments: args })
                 });
                 tools.execute(call.name, args, ctx, function(result) {
+                    // A deterministic tool already produced the sentence the
+                    // user needs. Do not pay for a second LLM round just to
+                    // repeat "Timer set for 45 seconds."
+                    if (options.allowEarlyFinish && result.ok && tool && !tool.alwaysSynthesis) {
+                        var reply = templates.forTool(call.name, args, result, ctx);
+                        finish(opts, reply.text, reply.widget, callback);
+                        return;
+                    }
                     if (result.widget) {
                         emitWidget(result.widget, opts.emit);
                     }
@@ -194,7 +204,7 @@ function warnAndDone(opts, message, callback) {
 function runFastPath(opts, ctx, decision, state, callback) {
     var tool = tools.get(decision.tool);
     if (!tool) {
-        runChat(opts, ctx, function(err, text) {
+        runChat(opts, ctx, { allowEarlyFinish: !decision.needsSynthesis }, function(err, text) {
             if (err) {
                 warnAndDone(opts, err.message || 'That tool is not available.', callback);
                 return;
@@ -234,7 +244,7 @@ function runFastPath(opts, ctx, decision, state, callback) {
         extract.run(tool, state, function(err, extraction) {
             if (err) {
                 log.warn('extract.failed', err);
-                runChat(opts, ctx, function(chatErr, text) {
+                runChat(opts, ctx, { allowEarlyFinish: !decision.needsSynthesis }, function(chatErr, text) {
                     if (chatErr) {
                         warnAndDone(opts, chatErr.message || 'I couldn\'t work out the details.', callback);
                         return;
@@ -280,7 +290,7 @@ exports.runTurn = function(opts) {
     router.decide(state, criteria, function(err, decision) {
         if (err) {
             log.warn('router.failed', err);
-            runChat(opts, ctx, function(chatErr, text) {
+            runChat(opts, ctx, { allowEarlyFinish: false }, function(chatErr, text) {
                 if (chatErr) {
                     warnAndDone(opts, chatErr.message || 'The assistant failed.', callback);
                     return;
@@ -293,7 +303,9 @@ exports.runTurn = function(opts) {
             runFastPath(opts, ctx, decision, state, callback);
             return;
         }
-        runChat(opts, ctx, function(chatErr, text) {
+        runChat(opts, ctx, {
+            allowEarlyFinish: decision.reason === 'low-confidence' && !decision.needsSynthesis
+        }, function(chatErr, text) {
             if (chatErr) {
                 warnAndDone(opts, chatErr.message || 'The assistant failed.', callback);
                 return;
