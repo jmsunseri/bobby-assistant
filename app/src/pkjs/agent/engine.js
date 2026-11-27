@@ -17,7 +17,7 @@ var log = require('./log');
 var location = require('../location');
 
 var MAX_CHAT_ROUNDS = 10;
-var MAX_TEXT = 900;
+var MAX_TEXT = 700;
 
 function truncate(text, limit) {
     var value = String(text || '').replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
@@ -54,20 +54,11 @@ function streamText(text, emit, callback) {
         callback();
         return;
     }
-    var words = clean.split(' ');
-    var index = 0;
-
-    function next() {
-        if (index >= words.length) {
-            callback();
-            return;
-        }
-        emit('c' + (index === 0 ? '' : ' ') + words[index]);
-        index++;
-        setTimeout(next, 35);
-    }
-
-    next();
+    // The watch gets one complete response instead of a word-by-word
+    // typewriter. 700 characters is comfortably inside the 1 KB AppMessage
+    // inbox and keeps ordinary answers on a single frame.
+    emit('c' + clean);
+    callback();
 }
 
 function emitWidget(widget, emit) {
