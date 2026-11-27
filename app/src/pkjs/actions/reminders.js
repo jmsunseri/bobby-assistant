@@ -55,12 +55,14 @@ exports.deleteReminder = function(session, message, callback) {
   var reminderId = message['id'];
   if (!reminderId) {
     callback({"error": "No reminder ID provided"});
+    return;
   }
   
   try {
     var success = reminders.deleteReminder(reminderId);
     if (!success) {
       callback({"error": "Reminder not found"});
+      return;
     }
     session.enqueue({ACTION_REMINDER_DELETED: 1});
     callback({"status": "ok"});

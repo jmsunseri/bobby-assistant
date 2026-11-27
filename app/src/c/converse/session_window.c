@@ -31,8 +31,6 @@
 
 #include <pebble.h>
 
-#include "report_window.h"
-
 #define PADDING 5
 
 struct SessionWindow {
@@ -50,6 +48,7 @@ struct SessionWindow {
   int segment_count;
   int segments_deleted;
   bool dictation_pending;
+  bool new_chat_pending;
   int content_height;
   int last_prompt_end_offset;
   time_t query_time;
@@ -78,7 +77,7 @@ static void prv_timed_out(void *ctx);
 static void prv_cancel_timeout(SessionWindow* sw);
 static void prv_action_menu_query(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
 static void prv_action_menu_input(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
-static void prv_action_menu_report_thread(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
+static void prv_action_menu_new_chat(ActionMenu *action_menu, const ActionMenuItem *action, void *context);
 static void prv_start_dictation(SessionWindow *sw);
 
 void session_window_push(int timeout, char *starting_prompt) {
@@ -441,6 +440,10 @@ static void prv_destroy_action_menu(ActionMenu *action_menu, const ActionMenuIte
     free(sw->last_prompt_label);
     sw->last_prompt_label = NULL;
   }
+  if (sw->new_chat_pending) {
+    sw->new_chat_pending = false;
+    window_stack_pop(true);
+  }
 }
 
 static void prv_select_long_pressed(ClickRecognizerRef recognizer, void *context) {
@@ -467,7 +470,7 @@ static void prv_select_long_pressed(ClickRecognizerRef recognizer, void *context
   }
   action_menu_level_add_action(action_menu, "Dictate", prv_action_menu_query, NULL);
   action_menu_level_set_separator_index(action_menu, separator_index);
-  action_menu_level_add_action(action_menu, "Report conversation", prv_action_menu_report_thread, NULL);
+  action_menu_level_add_action(action_menu, "New conversation", prv_action_menu_new_chat, NULL);
   ActionMenuConfig config = (ActionMenuConfig) {
     .root_level = action_menu,
     .colors = {
@@ -497,9 +500,16 @@ static void prv_action_menu_input(ActionMenu *action_menu, const ActionMenuItem 
   sw->query_time = time(NULL);
 }
 
-static void prv_action_menu_report_thread(ActionMenu *action_menu, const ActionMenuItem *action, void *context) {
+static void prv_action_menu_new_chat(ActionMenu *action_menu, const ActionMenuItem *action, void *context) {
   SessionWindow* sw = context;
-  report_window_push(conversation_get_thread_id(conversation_manager_get_conversation(sw->manager)));
+  DictionaryIterator *iter;
+  if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
+    dict_write_uint8(iter, MESSAGE_KEY_NEW_CHAT, 1);
+    app_message_outbox_send();
+  }
+  // Wait for the action menu to close before destroying this window: the close
+  // handler still uses this SessionWindow to free its label.
+  sw->new_chat_pending = true;
 }
 
 static void prv_scrolled_handler(ScrollLayer* scroll_layer, void* context) {

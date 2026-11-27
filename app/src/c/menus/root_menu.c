@@ -15,12 +15,10 @@
  */
 
 #include "root_menu.h"
-#include "quota_window.h"
 #include "alarm_menu.h"
 #include "about_window.h"
 #include "legal_window.h"
 #include "reminders_menu.h"
-#include "feedback_window.h"
 #include "../util/style.h"
 #include "../util/memory/malloc.h"
 #include "../util/memory/sdk.h"
@@ -30,13 +28,12 @@
 
 static void prv_window_load(Window* window);
 static void prv_window_unload(Window* window);
-static void prv_push_quota_screen(int index, void* context);
 static void prv_push_alarm_screen(int index, void* context);
 static void prv_push_timer_screen(int index, void* context);
 static void prv_push_about_screen(int index, void* context);
 static void prv_push_legal_screen(int index, void* context);
 static void prv_push_reminders_screen(int index, void* context);
-static void prv_push_feedback_screen(int index, void* context);
+static void prv_open_issues(int index, void* context);
 
 static SimpleMenuSection s_menu_section = {
   .num_items = 0,
@@ -80,26 +77,21 @@ static void prv_window_load(Window* window) {
       .icon = bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_REMINDERS),
     };
     s_menu_items[3] = (SimpleMenuItem) {
-      .title = "Quota",
-      .callback = prv_push_quota_screen,
-      .icon = bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_QUOTA),
-    };
-    s_menu_items[4] = (SimpleMenuItem) {
-      .title = "Feedback",
-      .callback = prv_push_feedback_screen,
+      .title = "Report an issue",
+      .callback = prv_open_issues,
       .icon = bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_FEEDBACK),
     };
-    s_menu_items[5] = (SimpleMenuItem) {
+    s_menu_items[4] = (SimpleMenuItem) {
       .title = "About",
       .callback = prv_push_about_screen,
       .icon = bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_ABOUT),
     };
-    s_menu_items[6] = (SimpleMenuItem) {
+    s_menu_items[5] = (SimpleMenuItem) {
       .title = "Legal",
       .callback = prv_push_legal_screen,
       .icon = bgbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_LEGAL),
     };
-    s_menu_section.num_items = 7;
+    s_menu_section.num_items = 6;
     s_menu_section.items = s_menu_items;
   }
 
@@ -130,10 +122,6 @@ static void prv_window_unload(Window* window) {
   window_destroy(window);
 }
 
-static void prv_push_quota_screen(int index, void* context) {
-  push_quota_window();
-}
-
 static void prv_push_alarm_screen(int index, void* context) {
   alarm_menu_window_push(false);
 }
@@ -150,8 +138,13 @@ static void prv_push_reminders_screen(int index, void* context) {
   reminders_menu_push();
 }
 
-static void prv_push_feedback_screen(int index, void* context) {
-  feedback_window_push();
+static void prv_open_issues(int index, void* context) {
+  DictionaryIterator *iter;
+  if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
+    return;
+  }
+  dict_write_uint8(iter, MESSAGE_KEY_OPEN_ISSUES, 1);
+  app_message_outbox_send();
 }
 
 static void prv_push_about_screen(int index, void* context) {

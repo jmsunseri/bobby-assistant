@@ -16,117 +16,38 @@
 
 var LOGGING_ENABLED = false;
 
-var location = require('./location');
-var config = require('./config');
-var actions = require('./actions');
 var widgets = require('./widgets');
 var messageQueue = require('./lib/message_queue').Queue;
-var features = require('./features');
-
-var API_URL = require('./urls').QUERY_URL;
-var package_json = require('package.json');
+var engine = require('./agent/engine');
 
 function Session(prompt, threadId, consentVersion) {
     this.prompt = prompt;
     this.threadId = threadId;
     this.consentVersion = consentVersion;
-    this.ws = undefined;
     this.hasOpenDialog = false;
-}
-
-function getSettings() {
-    return JSON.parse(localStorage.getItem('clay-settings')) || {};
 }
 
 Session.prototype.run = function() {
     if (LOGGING_ENABLED) {
         messageQueue.startLogging();
     }
-    console.log("Opening websocket connection...");
-    var url = API_URL + '?prompt=' + encodeURIComponent(this.prompt) + '&token=' + exports.userToken;
-    if (location.isReady() && config.isLocationEnabled()) {
-        var loc = location.getPos();
-        url += '&lon=' + loc.lon + '&lat=' + loc.lat;
-    } else {
-        url += '&location=unknown';
-    }
-    if (this.threadId) {
-        url += '&threadId=' + encodeURIComponent(this.threadId);
-    }
-    // negate this because JavaScript does it backwards for some reason.
-    url += '&tzOffset=' + (-(new Date()).getTimezoneOffset());
-    url += '&actions=' + actions.getSupportedActions().join(',');
-    url += '&widgets=weather,timer,number';
-    if (features.FEATURE_MAP_WIDGET) {
-        url += ',map';
-    }
-    var settings = getSettings();
-    url += '&units=' + settings['UNIT_PREFERENCE'] || '';
-    url += '&lang=' + settings['LANGUAGE_CODE'] || '';
-    url += '&version=' + package_json['version'];
-    if (this.consentVersion) {
-        url += '&consentVersion=' + this.consentVersion;
-    }
-
-    // Figure out our colour support
-    if (Pebble.getActiveWatchInfo) {
-        var platform = Pebble.getActiveWatchInfo().platform;
-        var supportsColour;
-        var screenWidth;
-        var screenHeight;
-        switch (platform) {
-            case 'aplite':
-                supportsColour = false;
-                screenWidth = 144;
-                screenHeight = 168;
-                break;
-            case 'basalt':
-                supportsColour = true;
-                screenWidth = 144;
-                screenHeight = 168;
-                break;
-            case 'chalk':
-                supportsColour = true;
-                screenWidth = 180;
-                screenHeight = 180;
-                break;
-            case 'diorite':
-                supportsColour = false;
-                screenWidth = 144;
-                screenHeight = 168;
-                break;
-            case 'emery':
-                supportsColour = true;
-                screenWidth = 200;
-                screenHeight = 228;
-                break;
-            case 'flint':
-                supportsColour = false;
-                screenWidth = 144;
-                screenHeight = 168;
-                break;
-            case 'gabbro':
-                supportsColour = true;
-                screenWidth = 260;
-                screenHeight = 260;
-                break;
-            default:
-                console.log('Unknown platform: ' + platform);
-                // generally a safe bet.
-                supportsColour = false;
-                screenWidth = 144;
-                screenHeight = 168;
+    var self = this;
+    engine.runTurn({
+        prompt: this.prompt,
+        threadId: this.threadId,
+        consentVersion: this.consentVersion,
+        session: this,
+        emit: function(frame) {
+            self.handleMessage({ data: frame });
+        },
+        done: function() {
+            if (LOGGING_ENABLED) {
+                console.log(JSON.stringify(messageQueue.getLog()));
+                messageQueue.stopLogging();
+            }
         }
-        url += '&supportsColour=' + supportsColour;
-        url += '&screenWidth=' + screenWidth;
-        url += '&screenHeight=' + screenHeight;
-    }
-
-    console.log(url);
-    this.ws = new WebSocket(url);
-    this.ws.addEventListener('message', this.handleMessage.bind(this));
-    this.ws.addEventListener('close', this.handleClose.bind(this));
-}
+    });
+};
 
 Session.prototype.handleMessage = function(event) {
     var message = event.data;
@@ -178,8 +99,6 @@ Session.prototype.handleMessage = function(event) {
             console.log(JSON.stringify(messageQueue.getLog()));
             messageQueue.stopLogging();
         }
-    } else if (message[0] == 'a') {
-        actions.handleAction(this, this.ws, message.substring(1));
     } else if (message[0] == 't') {
         this.enqueue({
             THREAD_ID: message.substring(1)
@@ -189,7 +108,7 @@ Session.prototype.handleMessage = function(event) {
             WARNING: message.substring(1)
         });
     }
-}
+};
 
 Session.prototype.processWidget = function(widgetData) {
     widgets.handleWidget(this, widgetData);
@@ -201,15 +120,6 @@ Session.prototype.enqueue = function(message) {
 
 Session.prototype.dequeue = function() {
     messageQueue.dequeue();
-}
-
-Session.prototype.handleClose = function(event) {
-    console.log("Connection closed. Code: " + event.code + ". Reason: \"" + event.reason + "\". Was clean: " + event.wasClean);
-    this.enqueue({
-        CLOSE_CODE: event.code,
-        CLOSE_REASON: event.reason,
-        CLOSE_WAS_CLEAN: event.wasClean
-    });
 }
 
 exports.Session = Session;

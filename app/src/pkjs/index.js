@@ -16,35 +16,58 @@
 
 var location = require('./location');
 var session = require('./session');
-var quota = require('./quota');
 var Clay = require('@rebble/clay');
 var clayConfig = require('./config.json');
 var customConfigFunction = require('./custom_config');
 var config = require('./config');
 var reminders = require('./reminders');
-var feedback = require('./lib/feedback');
 var consent = require('./consent');
+var history = require('./agent/history');
 var package_json = require('package.json');
 
+var ISSUES_URL = 'https://github.com/jmsunseri/bobby-assistant/issues';
 
-var clay = new Clay(clayConfig, customConfigFunction);
+// Clay stores all settings in localStorage, but only these are meaningful to
+// the watch. API keys deliberately stay on the phone and are never sent over
+// AppMessage.
+var WATCH_SETTINGS = {
+    LANGUAGE_CODE: true,
+    UNIT_PREFERENCE: true,
+    LOCATION_ENABLED: true,
+    ALARM_VIBE_PATTERN: true,
+    TIMER_VIBE_PATTERN: true,
+    QUICK_LAUNCH_BEHAVIOUR: true,
+    CONFIRM_TRANSCRIPTS: true
+};
+
+var clay = new Clay(clayConfig, customConfigFunction, { autoHandleEvents: false });
+
+Pebble.addEventListener('showConfiguration', function() {
+    Pebble.openURL(clay.generateUrl());
+});
+
+Pebble.addEventListener('webviewclosed', function(e) {
+    if (!e || !e.response) {
+        return;
+    }
+    var raw = clay.getSettings(e.response, false);
+    var forWatch = {};
+    for (var key in raw) {
+        if (raw.hasOwnProperty(key) && WATCH_SETTINGS[key]) {
+            forWatch[key] = raw[key];
+        }
+    }
+    Pebble.sendAppMessage(Clay.prepareSettingsForAppMessage(forWatch), function() {
+        console.log('Sent watch settings.');
+    }, function(error) {
+        console.log('Failed to send watch settings: ' + JSON.stringify(error));
+    });
+});
 
 function main() {
-    doQuotaWarning();
     location.update();
     consent.refresh();
     Pebble.addEventListener('appmessage', handleAppMessage);
-}
-
-function doQuotaWarning() {
-    quota.fetchQuota(function(response) {
-        if (!response.hasSubscription) {
-            Pebble.showSimpleNotificationOnPebble(
-                "Subscription Needed",
-                "In order to use Bobby, you need a Rebble subscription. You can sign up for a subscription at auth.rebble.io."
-            );
-        }
-    });
 }
 
 function handleAppMessage(e) {
@@ -66,9 +89,13 @@ function handleAppMessage(e) {
         console.log("Sending consent pages...");
         consent.handleRequest();
     }
-    if (data.QUOTA_REQUEST) {
-        console.log("Requesting quota...");
-        quota.handleQuotaRequest();
+    if (data.OPEN_ISSUES) {
+        console.log("Opening GitHub issues...");
+        Pebble.openURL(ISSUES_URL);
+    }
+    if (data.NEW_CHAT) {
+        console.log("Starting a new conversation...");
+        history.clear();
     }
     if ('LOCATION_ENABLED' in data) {
         config.setSetting("LOCATION_ENABLED", !!data.LOCATION_ENABLED);
@@ -77,14 +104,6 @@ function handleAppMessage(e) {
         Pebble.sendAppMessage({
             LOCATION_ENABLED: data.LOCATION_ENABLED,
         });
-    }
-    if ('FEEDBACK_TEXT' in data) {
-        console.log("Handling feedback...");
-        feedback.handleFeedbackRequest(data);
-    }
-    if ('REPORT_THREAD_UUID' in data) {
-        console.log("Handling report...");
-        feedback.handleReportRequest(data);
     }
 }
 
@@ -113,6 +132,8 @@ Pebble.addEventListener("ready",
             main();
         }, function(e) {
             console.log("Get timeline token failed???", e);
+            // Reminders need the token, but the local agent does not. Keep going.
+            main();
         })
     }
 );

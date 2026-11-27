@@ -43,7 +43,7 @@ exports.update = function() {
 }
 
 exports.isReady = function() {
-    return !!(cachedLon && cachedLat);
+    return typeof cachedLon === 'number' && typeof cachedLat === 'number';
 }
 
 exports.getPos = function() {

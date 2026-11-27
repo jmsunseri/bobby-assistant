@@ -140,6 +140,132 @@
         ]
     },
     {
+        "type": "section",
+        "items": [
+            {
+                "type": "heading",
+                "defaultValue": "Cloudflare"
+            },
+            {
+                "type": "text",
+                "defaultValue": "Bobby now runs the agent loop on your phone. Prompts go directly from the phone to Cloudflare Workers AI using the account below. No Bobby or Rebble server is involved."
+            },
+            {
+                "type": "input",
+                "id": "cfAccount",
+                "messageKey": "CF_ACCOUNT_ID",
+                "label": "Cloudflare account ID",
+                "defaultValue": "",
+                "attributes": {
+                    "placeholder": "Your 32-character account ID"
+                }
+            },
+            {
+                "type": "input",
+                "id": "cfToken",
+                "messageKey": "CF_API_TOKEN",
+                "group": "secret",
+                "label": "Cloudflare API token",
+                "defaultValue": "",
+                "attributes": {
+                    "type": "password",
+                    "placeholder": "A token with Workers AI access"
+                }
+            },
+            {
+                "type": "toggle",
+                "id": "cfPaid",
+                "messageKey": "CF_PAID_PLAN",
+                "defaultValue": true,
+                "label": "Workers Paid plan",
+                "description": "Some Workers AI models require a paid plan. Turn this off to show only free-plan models."
+            },
+            {
+                "type": "select",
+                "id": "cfModel",
+                "messageKey": "CF_MODEL",
+                "label": "Language model",
+                "description": "Used for open-ended chat and for summarising tool results. Clef and Clairic handle routing and extraction.",
+                "defaultValue": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+                "options": [
+                    {"label": "DeepSeek V4.1 Flash (paid)", "value": "@cf/deepseek-ai/deepseek-v4.1-flash-1017"},
+                    {"label": "Inkling 2 Small (paid)", "value": "@cf/thinkingmachines/inkling-2-small"},
+                    {"label": "GLM-5.3 (paid)", "value": "@cf/zai-org/glm-5.3"},
+                    {"label": "Qwen 3.8 27B (free plan)", "value": "@cf/qwen/qwen3.8-27b"},
+                    {"label": "Gemma 4 26B (free plan)", "value": "@cf/google/gemma-4-26b-a4b-it"}
+                ]
+            },
+            {
+                "type": "select",
+                "id": "cfEffort",
+                "messageKey": "CF_REASONING_EFFORT",
+                "label": "Reasoning effort",
+                "description": "Low keeps watch replies fast. High can make the model think for several seconds.",
+                "defaultValue": "low",
+                "options": [
+                    {"label": "None", "value": "none"},
+                    {"label": "Low", "value": "low"},
+                    {"label": "High", "value": "high"}
+                ]
+            }
+        ]
+    },
+    {
+        "type": "section",
+        "items": [
+            {
+                "type": "heading",
+                "defaultValue": "Optional tools"
+            },
+            {
+                "type": "text",
+                "defaultValue": "Tools whose key is missing are hidden from the assistant. API keys stay on your phone and are never sent to the watch."
+            },
+            {
+                "type": "toggle",
+                "id": "showSecrets",
+                "defaultValue": false,
+                "label": "Show API keys"
+            },
+            {
+                "type": "input",
+                "id": "braveKey",
+                "messageKey": "BRAVE_API_KEY",
+                "group": "secret",
+                "label": "Brave Search API key",
+                "defaultValue": "",
+                "attributes": {
+                    "type": "password",
+                    "placeholder": "Optional: enables web search"
+                }
+            },
+            {
+                "type": "input",
+                "id": "exchangeKey",
+                "messageKey": "EXCHANGE_RATE_API_KEY",
+                "group": "secret",
+                "label": "ExchangeRate-API key",
+                "defaultValue": "",
+                "attributes": {
+                    "type": "password",
+                    "placeholder": "Optional: enables currency conversion"
+                }
+            },
+            {
+                "type": "input",
+                "id": "mapboxToken",
+                "messageKey": "MAPBOX_TOKEN",
+                "group": "secret",
+                "label": "Mapbox token",
+                "defaultValue": "",
+                "attributes": {
+                    "type": "password",
+                    "placeholder": "Optional: better place-name geocoding"
+                }
+            }
+        ]
+    },
+    {
         "type": "submit",
         "defaultValue": "Save"
     }
