@@ -44,12 +44,11 @@ function secondsLabel(seconds) {
 }
 
 function setTimer(args, ctx, callback) {
-    var minutes = Number(args.duration_minutes);
-    if (!isFinite(minutes) || minutes <= 0) {
+    var seconds = Math.round(Number(args.duration_seconds));
+    if (!isFinite(seconds) || seconds <= 0) {
         callback({ ok: false, error: 'How long should the timer be?' });
         return;
     }
-    var seconds = Math.round(minutes * 60);
     var target = new Date((new Date()).getTime() + seconds * 1000);
     actions.setAlarm(ctx.session, {
         isTimer: true,
@@ -63,14 +62,7 @@ function setTimer(args, ctx, callback) {
         }
         callback({
             ok: true,
-            text: 'Timer set for ' + minutesLabel(minutes) + '.',
-            widget: {
-                type: 'timer',
-                content: {
-                    target_time: target.toISOString(),
-                    name: args.name || ''
-                }
-            },
+            text: 'Timer set for ' + minutesLabel(seconds / 60) + '.',
             data: { seconds: seconds, target: target.toISOString(), name: args.name || '' }
         });
     });
@@ -227,14 +219,14 @@ exports.setTimer = {
     description: 'Start a countdown timer.',
     criteria: 'Start a timer that counts down for a number of minutes or hours.',
     fields: {
-        duration_minutes: {
+        duration_seconds: {
             type: 'number',
             integer: true,
-            instructions: 'How many minutes from now until the timer should fire. Convert hours to minutes.'
+            instructions: 'How many seconds from now until the timer should fire. Convert minutes and hours to seconds.'
         },
         name: nameField
     },
-    required: ['duration_minutes'],
+    required: ['duration_seconds'],
     requiresKeys: [],
     thought: function(args) {
         return 'Setting a timer...';

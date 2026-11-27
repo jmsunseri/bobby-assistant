@@ -2,6 +2,11 @@ import { describe, it, expect } from 'vitest';
 import alarms from '../app/src/pkjs/agent/tools/alarms.js';
 
 describe('timer duration labels', () => {
+  it('uses a seconds field so short timers are not rounded up', () => {
+    expect(alarms.setTimer.required).toContain('duration_seconds');
+    expect(alarms.setTimer.fields.duration_seconds.type).toBe('number');
+  });
+
   it('describes sub-minute timers in seconds', () => {
     expect(alarms.minutesLabel(0.5)).toBe('30 seconds');
     expect(alarms.minutesLabel(0.25)).toBe('15 seconds');
